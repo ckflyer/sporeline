@@ -1,0 +1,42 @@
+{{define "add.html"}}{{template "head" .}}
+{{$d := .Data}}
+<h1>Add {{$d.Kind.Name}}</h1>
+<p class="sub">
+  {{if $d.Parents}}Made from {{range $d.Parents}}<code>{{.ID}}</code> {{end}}— that makes it generation {{$d.Gen}}.
+  {{else}}Nothing selected as a parent, so this will be generation 0: bought, gifted, or collected.{{end}}
+</p>
+
+<form method="post" action="/add">
+  <input type="hidden" name="kind" value="{{$d.Kind.Key}}">
+  {{range $d.Parents}}<input type="hidden" name="parent" value="{{.ID}}">{{end}}
+  <div class="panel" style="max-width:640px">
+    <div class="grid2">
+      <label class="f"><span>Species / strain</span>
+        <input type="text" name="species" value="{{$d.Species}}" list="species-list" autocomplete="off" placeholder="Blue Oyster" autofocus>
+        <datalist id="species-list">{{range $d.AllSpecies}}<option value="{{.}}">{{end}}</datalist>
+        <p class="hint">Free text. Anything you have typed before will suggest itself.</p></label>
+      <label class="f"><span>Type (optional)</span>
+        <input type="text" name="sub" list="sub-list" autocomplete="off" placeholder="{{if $d.Subs}}{{index $d.Subs 0}}{{end}}">
+        <datalist id="sub-list">{{range $d.Subs}}<option value="{{.}}">{{end}}</datalist>
+        <p class="hint">Does not change the ID.</p></label>
+    </div>
+    <div class="grid2">
+      <label class="f"><span>Started</span><input type="date" name="created" value="{{$d.Today}}"></label>
+      <label class="f"><span>How many</span><input type="number" name="count" value="1" min="1" max="40">
+        <p class="hint">Making six plates? Each gets its own ID.</p></label>
+    </div>
+    {{if not $d.Parents}}
+    <label class="f"><span>Made from (optional)</span>
+      <select name="parent" multiple size="6">
+        {{range $d.Others}}<option value="{{.ID}}">{{.ID}} — {{.Species}}{{if .Sub}} ({{.Sub}}){{end}}</option>{{end}}
+      </select>
+      <p class="hint">Hold ctrl or cmd to pick several — a tub spawned from two jars has two parents.</p></label>
+    {{end}}
+    <label class="f"><span>Notes</span><textarea name="notes" placeholder="Optional"></textarea></label>
+    <div class="btnrow">
+      <button class="btn">Add {{$d.Kind.Name}}</button>
+      <a class="btn ghost" href="/list/{{$d.Kind.Key}}">Cancel</a>
+    </div>
+  </div>
+</form>
+{{template "foot" .}}{{end}}

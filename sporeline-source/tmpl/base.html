@@ -1,0 +1,27 @@
+{{define "head"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · Sporeline</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">Sporeline<small>cultivation log</small></a>
+  <nav>
+    <a href="/list/all" {{if eq .Tab "all"}}class="on"{{end}}>Everything</a>
+    {{range kinds}}<a href="/list/{{.Key}}" {{if eq $.Tab .Key}}class="on"{{end}}><i style="background:{{.Color}}"></i>{{.Plural}}</a>{{end}}
+    <a href="/recipes" {{if eq .Tab "recipes"}}class="on"{{end}}>Recipes</a>
+    <a href="/data" {{if eq .Tab "data"}}class="on"{{end}}>Data</a>
+  </nav>
+</header>
+<main>
+{{end}}
+
+{{define "foot"}}
+</main>
+<footer><a href="/guide">How this works</a> · <a href="/data">Where your data lives</a></footer>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,26 @@
+{{define "recipe_form.html"}}{{template "head" .}}
+{{$r := .Data}}
+<h1>{{if $r.ID}}Edit recipe{{else}}New recipe{{end}}</h1>
+<form method="post" action="/recipe">
+  <input type="hidden" name="id" value="{{$r.ID}}">
+  <div class="panel" style="max-width:680px">
+    <div class="grid2">
+      <label class="f"><span>Name</span><input type="text" name="title" value="{{$r.Title}}" placeholder="MEA plates" autofocus></label>
+      <label class="f"><span>Kind</span><select name="category">{{range cats}}<option {{if eq . $r.Category}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+    </div>
+    <label class="f"><span>Makes</span><input type="text" name="yield" value="{{$r.Yield}}" placeholder="1 L, about 25 plates"></label>
+    <label class="f"><span>Ingredients</span>
+      {{range $r.Ingredients}}
+      <div class="ingrow">
+        <input type="text" name="amount" value="{{.Amount}}" placeholder="20">
+        <input type="text" name="unit" value="{{.Unit}}" placeholder="g">
+        <input type="text" name="name" value="{{.Name}}" placeholder="light malt extract">
+      </div>{{end}}
+      <p class="hint">Leave rows blank if you do not need them.</p></label>
+    <label class="f"><span>Sterilize or pasteurize</span><input type="text" name="sterilize" value="{{$r.Sterilize}}" placeholder="15 psi, 30 min, slow cool"></label>
+    <label class="f"><span>Method</span><textarea name="steps" placeholder="One step per line">{{$r.Steps}}</textarea></label>
+    <label class="f"><span>Notes</span><textarea name="notes">{{$r.Notes}}</textarea></label>
+    <div class="btnrow"><button class="btn">Save recipe</button><a class="btn ghost" href="/recipes">Cancel</a></div>
+  </div>
+</form>
+{{template "foot" .}}{{end}}
