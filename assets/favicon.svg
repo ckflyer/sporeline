@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#1F4D3A"/>
+  <!-- cap -->
+  <path d="M13 27c0-10.5 8.5-17 19-17s19 6.5 19 17c0 2.2-1.6 3.4-4 3.4H17c-2.4 0-4-1.2-4-3.4z" fill="#F3F6EC"/>
+  <!-- gill line -->
+  <rect x="16" y="30.4" width="32" height="3.2" rx="1.6" fill="#F3F6EC" opacity=".55"/>
+  <!-- stem forking into two -->
+  <path d="M32 34v9M32 43c0 5-9 5-9 10M32 43c0 5 9 5 9 10" fill="none" stroke="#F3F6EC" stroke-width="4.4" stroke-linecap="round"/>
+  <circle cx="23" cy="55" r="3.6" fill="#C09A1F"/>
+  <circle cx="41" cy="55" r="3.6" fill="#C09A1F"/>
+</svg>

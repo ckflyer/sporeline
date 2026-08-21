@@ -83,6 +83,14 @@ go build .
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o sporeline.exe .
 ```
 
+The Windows icon comes from `rsrc_windows_amd64.syso`, which the Go toolchain
+picks up automatically. To rebuild it after changing `assets/sporeline.ico`:
+
+```
+go install github.com/akavel/rsrc@latest
+rsrc -ico assets/sporeline.ico -arch amd64 -o rsrc_windows_amd64.syso
+```
+
 ## License
 
 Add your own — MIT keeps it compatible with the project this one learned from.

@@ -1,0 +1,32 @@
+SPORELINE
+
+Quick start
+-----------
+1. Double-click sporeline.exe.
+   A console window opens, then your browser opens to the log.
+   Windows may warn about an unrecognised publisher because the file
+   is not signed: More info -> Run anyway.
+
+2. Leave the console window open while you work. Closing it stops
+   Sporeline. Nothing is lost when you close it.
+
+3. Your data goes to C:\Users\<you>\sporeline\
+   Back up that folder and you have backed up everything.
+
+Coming from mycolog
+-------------------
+   python convert_mycolog.py "C:\Users\<you>\mycolog"
+
+Then in Sporeline: Data -> Import -> pick the file it wrote.
+Your existing mycolog IDs carry over unchanged, so labels already on
+your jars stay correct.
+
+What else is in here
+--------------------
+   README.md            the full documentation, ready for GitHub
+   NOTICE               attribution for mycolog, which this follows
+   convert_mycolog.py   the mycolog importer
+   assets/ tmpl/ *.go   the source, buildable with: go build .
+
+Note: .gitignore excludes sporeline.exe on purpose. Built binaries
+belong in a GitHub Release rather than the repository.

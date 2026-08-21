@@ -1,0 +1,7 @@
+sporeline
+sporeline.exe
+*.json
+!go.sum
+
+# keep the icon resource
+!rsrc_windows_amd64.syso

@@ -1,0 +1,56 @@
+{{define "list.html"}}{{template "head" .}}
+{{$d := .Data}}
+<div class="pagehead">
+  <div>
+    <h1>{{$d.Kind.Plural}}</h1>
+    <p class="sub">{{if eq $d.KindKey "all"}}Everything you have logged, newest first. Nothing is ever thrown away — cultures you no longer have stay here so the family tree keeps making sense.{{else}}{{$d.Total}} logged.{{end}}</p>
+  </div>
+  <div class="btnrow">
+    {{if eq $d.KindKey "all"}}{{range kinds}}<a class="btn ghost" href="/add?kind={{.Key}}">Add {{.Name}}</a>{{end}}
+    {{else}}<a class="btn" href="/add?kind={{$d.KindKey}}">Add {{$d.Kind.Name}}</a>{{end}}
+  </div>
+</div>
+
+<form class="filters" method="get" id="filterform">
+  <input type="text" name="q" placeholder="Search IDs, species, notes" value="{{$d.Q}}" style="width:250px">
+  <select name="species" onchange="this.form.submit()">
+    <option value="">Any species</option>
+    {{range $d.AllSpecies}}<option {{if eq . $d.Species}}selected{{end}}>{{.}}</option>{{end}}
+  </select>
+  <select name="show" onchange="this.form.submit()">
+    <option value="" {{if eq $d.Show ""}}selected{{end}}>Everything</option>
+    <option value="here" {{if eq $d.Show "here"}}selected{{end}}>Still have it</option>
+    <option value="gone" {{if eq $d.Show "gone"}}selected{{end}}>Gone</option>
+  </select>
+  <button class="btn ghost sm">Search</button>
+  {{if or $d.Q $d.Species $d.Show}}<a class="btn ghost sm" href="/list/{{$d.KindKey}}">Clear</a>{{end}}
+</form>
+{{if or $d.Q $d.Species $d.Show}}<p class="showing">Showing {{$d.Total}} of {{$d.Pool}}.</p>{{end}}
+
+{{if $d.Items}}
+<table>
+  <thead><tr>
+    <th>ID</th><th>Species</th><th class="hide-s">Type</th><th class="hide-s">Started</th>
+    <th class="hide-s">Age</th><th>Status</th>
+  </tr></thead>
+  <tbody>
+  {{range $d.Items}}{{$k := kindOf .Kind}}
+    <tr {{if .Gone}}class="gone"{{end}}>
+      <td class="id"><a href="/component/{{.ID}}">{{.ID}}</a></td>
+      <td>{{.Species}}{{if .Sub}} <span style="color:var(--muted)">· {{.Sub}}</span>{{end}}</td>
+      <td class="hide-s"><span class="tag"><i style="background:{{$k.Color}}"></i>{{$k.Name}}</span></td>
+      <td class="hide-s">{{date .Created}}</td>
+      <td class="hide-s" style="color:var(--muted)">{{since .Created}}</td>
+      <td>{{if .Gone}}<span class="badge gone">gone</span>{{else}}<span style="color:var(--muted)">have it</span>{{end}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<div class="empty">
+  <h2>Nothing here yet</h2>
+  <p>{{if eq $d.KindKey "all"}}Start with what you actually have in hand — a print, a syringe, a plate someone gave you. That is generation zero.{{else}}No {{$d.Kind.Plural}} logged yet.{{end}}</p>
+  <p><a class="btn" href="/add?kind={{if eq $d.KindKey "all"}}spores{{else}}{{$d.KindKey}}{{end}}">Add {{if eq $d.KindKey "all"}}Spores{{else}}{{$d.Kind.Name}}{{end}}</a></p>
+</div>
+{{end}}
+{{template "foot" .}}{{end}}
