@@ -1,0 +1,42 @@
+{{define "data.html"}}{{template "head" .}}
+{{$d := .Data}}
+<h1>Your data</h1>
+<p class="sub">Everything Sporeline knows lives in one folder on this computer. No account, no server, nothing leaves the machine.</p>
+{{if $d.Notice}}<div class="notice">{{$d.Notice}}</div>{{end}}
+<div class="cols">
+  <div>
+    <div class="panel">
+      <h3>Where it lives</h3>
+      <p style="font-family:var(--mono);font-size:13px;word-break:break-all;margin:0 0 8px">{{$d.Dir}}</p>
+      <p class="hint">Inside: <code>sporeline.json</code> holds your log, <code>pics/</code> holds your pictures. Copy that folder and you have copied everything.</p>
+      <dl class="kv" style="margin-top:12px">
+        <dt>Cultures</dt><dd>{{$d.Count}}</dd>
+        <dt>Recipes</dt><dd>{{$d.Recipes}}</dd>
+        <dt>Pictures</dt><dd>{{$d.Pics}}</dd>
+      </dl>
+    </div>
+    <div class="panel">
+      <h3>Backup</h3>
+      <p style="margin:0 0 10px">Save a single file with every culture and recipe in it.</p>
+      <a class="btn" href="/export">Save backup file</a>
+      <p class="hint">Pictures stay in the pics folder — copy the whole folder for a complete backup.</p>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <h3>Import</h3>
+      <p style="margin:0 0 10px">Load a Sporeline backup, or a file converted from mycolog.</p>
+      <form method="post" action="/import" enctype="multipart/form-data">
+        <label class="f"><span>File</span><input type="file" name="file" accept="application/json,.json" required></label>
+        <label class="f"><span>How</span>
+          <select name="mode">
+            <option value="merge">Add to what is already here</option>
+            <option value="replace">Replace everything</option>
+          </select></label>
+        <button class="btn">Import</button>
+      </form>
+      <p class="hint">Merging skips anything whose ID you already have, so importing twice is harmless.</p>
+    </div>
+  </div>
+</div>
+{{template "foot" .}}{{end}}

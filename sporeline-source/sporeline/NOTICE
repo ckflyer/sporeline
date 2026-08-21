@@ -1,0 +1,32 @@
+Sporeline is a separate program, but its design comes from mycolog by
+Richard Ulmer: https://github.com/codesoap/mycolog
+
+Borrowed by design, not by code — no mycolog source is included here.
+What was taken: the four component kinds (spores, mycelium, spawn,
+grows), marking things "gone" instead of deleting them, the rule for
+which relatives appear in a family tree, renaming a species across an
+entire family, and the label alphabet that omits I, O and 0.
+
+mycolog is MIT licensed and its notice follows.
+
+---
+
+Copyright (c) 2022 Richard Ulmer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

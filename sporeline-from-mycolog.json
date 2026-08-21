@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "components": [
+    {
+      "id": "MY0XBR",
+      "kind": "myc",
+      "species": "Lion's Mane",
+      "gen": 0,
+      "created": "2026-07-01",
+      "notes": "Syringe purchased from Myyco. Received in mail July 1, 2026",
+      "gone": false,
+      "parents": [],
+      "legacy": "49L9",
+      "added": 0
+    },
+    {
+      "id": "MY11US",
+      "kind": "myc",
+      "species": "Lion's Mane",
+      "gen": 1,
+      "created": "2026-07-01",
+      "notes": "Innoculated LC with 1 gram of LME",
+      "gone": false,
+      "parents": [
+        "MY0XBR"
+      ],
+      "legacy": "5DNA",
+      "added": 0
+    },
+    {
+      "id": "MY0FXW",
+      "kind": "myc",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 0,
+      "created": "2024-01-01",
+      "notes": "Myyco Golden Teacher\r\n\r\nUnknown Date",
+      "gone": true,
+      "parents": [],
+      "legacy": "3LHZ",
+      "added": 0
+    },
+    {
+      "id": "SN1YYC",
+      "kind": "spawn",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 1,
+      "created": "2024-01-01",
+      "notes": "First grain spawn jar\r\n\r\nBrown Rice\r\n\r\nUnknown date",
+      "gone": true,
+      "parents": [
+        "MY0FXW"
+      ],
+      "legacy": "X9JW",
+      "added": 0
+    },
+    {
+      "id": "GR21AC",
+      "kind": "grow",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 2,
+      "created": "2024-01-01",
+      "notes": "First mushroom grow\r\n\r\nMonotub\r\n\r\nUnknown Date",
+      "gone": true,
+      "parents": [
+        "SN1YYC"
+      ],
+      "legacy": "KXT5",
+      "added": 0
+    },
+    {
+      "id": "MY3WWS",
+      "kind": "myc",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 3,
+      "created": "2024-01-01",
+      "notes": "Believe this was a clone\r\n\r\nUnknown Date",
+      "gone": true,
+      "parents": [
+        "GR21AC"
+      ],
+      "legacy": "5MTL",
+      "added": 0
+    },
+    {
+      "id": "SE39CV",
+      "kind": "spores",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 3,
+      "created": "2026-07-15",
+      "notes": "First attempt at agar\r\n\r\nSpores taken from old, dried mushrooms\r\n\r\nUnsure if spores are viable\r\n\r\nAlso first attempt with flow hood",
+      "gone": false,
+      "parents": [
+        "GR21AC"
+      ],
+      "legacy": "Z5SW",
+      "added": 0
+    },
+    {
+      "id": "SE36SA",
+      "kind": "spores",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 3,
+      "created": "2026-07-15",
+      "notes": "First attempt at agar\r\n\r\nSpores taken from old, dried mushrooms\r\n\r\nUnsure if spores are viable\r\n\r\nAlso first attempt with flow hood",
+      "gone": false,
+      "parents": [
+        "GR21AC"
+      ],
+      "legacy": "VG3P",
+      "added": 0
+    },
+    {
+      "id": "SN4X8F",
+      "kind": "spawn",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 4,
+      "created": "2026-07-01",
+      "notes": "Grain to grain transfer from old grain jar",
+      "gone": false,
+      "parents": [
+        "MY3WWS"
+      ],
+      "legacy": "SZGE",
+      "added": 0
+    },
+    {
+      "id": "MY035J",
+      "kind": "myc",
+      "species": "Psilocybe cubensis (Bluey Vuitton)",
+      "gen": 0,
+      "created": "2026-07-01",
+      "notes": "Myyco LC syringe\r\n\r\nReceived 07/01/2026",
+      "gone": false,
+      "parents": [],
+      "legacy": "6U2C",
+      "added": 0
+    },
+    {
+      "id": "SN21D8",
+      "kind": "spawn",
+      "species": "Lion's Mane",
+      "gen": 2,
+      "created": "2026-07-15",
+      "notes": "First attempt with whole oat grains\r\n\r\nBoiled ~30-45 min, dried, PC\r\n\r\nBreak and shake 8/5/2026",
+      "gone": true,
+      "parents": [
+        "MY11US"
+      ],
+      "legacy": "8WB4",
+      "added": 0
+    },
+    {
+      "id": "SN19ZW",
+      "kind": "spawn",
+      "species": "Psilocybe cubensis (Bluey Vuitton)",
+      "gen": 1,
+      "created": "2026-07-15",
+      "notes": "First attempt whole oat grain\r\n\r\nBoiled 30-45, dried, PC\r\n\r\nBreak and Shake 7/27/2026",
+      "gone": true,
+      "parents": [
+        "MY035J"
+      ],
+      "legacy": "FN4G",
+      "added": 0
+    },
+    {
+      "id": "MY4YUW",
+      "kind": "myc",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 4,
+      "created": "2026-08-01",
+      "notes": "Agar plate to plate transfer ",
+      "gone": false,
+      "parents": [
+        "SE36SA"
+      ],
+      "legacy": "3W58",
+      "added": 0
+    },
+    {
+      "id": "GR2R4K",
+      "kind": "grow",
+      "species": "Psilocybe cubensis (Bluey Vuitton)",
+      "gen": 2,
+      "created": "2026-08-13",
+      "notes": "Mixed with 100% coco choir 8/13/2026 in shoe box",
+      "gone": false,
+      "parents": [
+        "SN19ZW"
+      ],
+      "legacy": "EQF2",
+      "added": 0
+    },
+    {
+      "id": "SN5C3B",
+      "kind": "spawn",
+      "species": "Psilocybe cubensis (Golden Teacher)",
+      "gen": 5,
+      "created": "2026-08-20",
+      "notes": "3 or 4 agar wedges to grain.\r\n\r\nFirst agar to grain",
+      "gone": false,
+      "parents": [
+        "MY4YUW"
+      ],
+      "legacy": "GG3S",
+      "added": 0
+    },
+    {
+      "id": "GR3LCW",
+      "kind": "grow",
+      "species": "Lion's Mane",
+      "gen": 3,
+      "created": "2026-08-20",
+      "notes": "Pushed to bulk substrate - 100% hardwood pellets, 60% water, 40% pellets by weight\r\n\r\nGrain smelled weird, but not rotten or sour. Not sure if it will be good.",
+      "gone": false,
+      "parents": [
+        "SN21D8"
+      ],
+      "legacy": "US7T",
+      "added": 0
+    },
+    {
+      "id": "MY2CCZ",
+      "kind": "myc",
+      "species": "Lion's Mane",
+      "gen": 2,
+      "created": "2026-08-20",
+      "notes": "Testing for contamination after 8WB4 grain smelled weird",
+      "gone": false,
+      "parents": [
+        "MY11US"
+      ],
+      "legacy": "QAM2",
+      "added": 0
+    },
+    {
+      "id": "MY2DKN",
+      "kind": "myc",
+      "species": "Lion's Mane",
+      "gen": 2,
+      "created": "2026-08-20",
+      "notes": "Testing for contamination after 8WB4 grain smelled weird",
+      "gone": false,
+      "parents": [
+        "MY11US"
+      ],
+      "legacy": "TEP8",
+      "added": 0
+    },
+    {
+      "id": "MY2ZKZ",
+      "kind": "myc",
+      "species": "Lion's Mane",
+      "gen": 2,
+      "created": "2026-08-20",
+      "notes": "Testing for contamination after 8WB4 grain smelled weird",
+      "gone": false,
+      "parents": [
+        "MY11US"
+      ],
+      "legacy": "PTCE",
+      "added": 0
+    },
+    {
+      "id": "MY2JRV",
+      "kind": "myc",
+      "species": "Lion's Mane",
+      "gen": 2,
+      "created": "2026-08-20",
+      "notes": "Testing for contamination after 8WB4 grain smelled weird",
+      "gone": false,
+      "parents": [
+        "MY11US"
+      ],
+      "legacy": "JNYA",
+      "added": 0
+    }
+  ],
+  "recipes": [],
+  "pictures": {}
+}
