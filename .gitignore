@@ -1,7 +1,8 @@
+# built binaries
 sporeline
 sporeline.exe
-*.json
-!go.sum
 
-# keep the icon resource
-!rsrc_windows_amd64.syso
+# your own log, if you ever run it from the source folder
+sporeline.json
+pics/
+backups/
