@@ -1,30 +1,36 @@
 {{define "add.html"}}{{template "head" .}}
 {{$d := .Data}}
+<p class="back"><a href="{{$d.Back.URL}}">← {{$d.Back.Label}}</a></p>
 <h1>Add {{$d.Kind.Name}}</h1>
 <p class="sub">
-  {{if $d.Parents}}Made from {{range $d.Parents}}<code>{{.ID}}</code> {{end}}— that makes it generation {{$d.Gen}}.
-  {{else}}Nothing selected as a parent, so this will be generation 0: bought, gifted, or collected.{{end}}
+  {{if $d.Parents}}Made from {{range $d.Parents}}<code>{{.ID}}</code> {{end}}{{else}}No parent, so this starts its own line.{{end}}
 </p>
 
 <form method="post" action="/add">
   <input type="hidden" name="kind" value="{{$d.Kind.Key}}">
-  <div class="panel" style="max-width:640px">
+  <div class="panel">
+    <h3>What it is</h3>
     <div class="grid2">
-      <label class="f"><span>Species / strain</span>
-        <input type="text" name="species" value="{{$d.Species}}" list="species-list" autocomplete="off" placeholder="Blue Oyster" autofocus>
+      <label class="f"><span>Strain</span>
+        <input type="text" id="strain" name="strain" value="{{$d.Strain}}" list="strain-list" autocomplete="off" placeholder="Blue Oyster" autofocus>
+        <datalist id="strain-list">{{range $d.AllStrains}}<option value="{{.}}">{{end}}</datalist>
+</label>
+      <label class="f"><span>Species</span>
+        <input type="text" id="species" name="species" value="{{$d.Species}}" list="species-list" autocomplete="off" placeholder="Pleurotus ostreatus">
         <datalist id="species-list">{{range $d.AllSpecies}}<option value="{{.}}">{{end}}</datalist>
-        <p class="hint">Free text. Anything you have typed before will suggest itself.</p></label>
+</label>
+    </div>
+    <div class="grid2">
       <label class="f"><span>Type (optional)</span>
         <input type="text" name="sub" list="sub-list" autocomplete="off" placeholder="{{if $d.Subs}}{{index $d.Subs 0}}{{end}}">
-        <datalist id="sub-list">{{range $d.Subs}}<option value="{{.}}">{{end}}</datalist>
-        <p class="hint">Does not change the ID.</p></label>
-    </div>
-    <div class="grid2">
+        <datalist id="sub-list">{{range $d.Subs}}<option value="{{.}}">{{end}}</datalist></label>
       <label class="f"><span>Started</span><input type="date" name="created" value="{{$d.Today}}"></label>
-      <label class="f"><span>How many</span><input type="number" name="count" value="1" min="1" max="40">
-        <p class="hint">Making six plates? Each gets its own ID.</p></label>
     </div>
-    <label class="f"><span>Parents</span>
+  </div>
+
+  <div class="panel">
+    <h3>Where it came from</h3>
+    <label class="f"><span>Parents {{help "One row per parent. A tub spawned from two jars has two."}}</span>
       <div id="parents">
         {{if $d.Parents}}{{range $d.Parents}}
         <div class="rowline"><input type="text" name="parent" value="{{.ID}}" list="id-list" autocomplete="off" placeholder="Type an ID"></div>
@@ -32,16 +38,26 @@
         <div class="rowline"><input type="text" name="parent" list="id-list" autocomplete="off" placeholder="Type an ID, or leave empty"></div>
         {{end}}
       </div>
-      <datalist id="id-list">{{range $d.Others}}<option value="{{.ID}}">{{.Species}}{{if .Sub}} · {{.Sub}}{{end}}</option>{{end}}</datalist>
-      <div class="rowline" style="margin-top:2px">
-        <button type="button" class="plus" id="addparent" title="Add another parent">+</button>
-        <span class="hint" style="margin:0">Add a row for each parent — a tub spawned from two jars has two.</span>
-      </div>
+      <datalist id="id-list">{{range $d.Others}}<option value="{{.ID}}">{{.Title}}{{if .Sub}} · {{.Sub}}{{end}}</option>{{end}}</datalist>
+      <button type="button" class="plus" id="addparent" title="Add another parent">+</button>
     </label>
+    <label class="f" style="max-width:220px"><span>How many</span>
+      <input type="number" id="count" name="count" value="1" min="1" max="40">
+</label>
+  </div>
+
+  <div class="panel">
+    <h3>Labels <button type="button" id="reroll">new ones</button></h3>
+    <p class="hint" style="margin:0 0 10px">Write these on the jars.</p>
+    <div id="idpreview" class="idpreview"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Notes</h3>
     <label class="f"><span>Notes</span><textarea name="notes" placeholder="Optional"></textarea></label>
     <div class="btnrow">
       <button class="btn">Add {{$d.Kind.Name}}</button>
-      <a class="btn ghost" href="/list/{{$d.Kind.Key}}">Cancel</a>
+      <a class="btn ghost" href="{{$d.Back.URL}}">Cancel</a>
     </div>
   </div>
 </form>
@@ -52,6 +68,48 @@ document.getElementById("addparent").addEventListener("click", function(){
   row.querySelector("input").value = "";
   box.appendChild(row);
   row.querySelector("input").focus();
+});
+var pairs = {{strainMap}};
+var PREFIX = "{{$d.Prefix}}", ALPHABET = "{{$d.Alphabet}}";
+var TAKEN = {};
+{{range $d.TakenIDs}}TAKEN["{{.}}"] = true;
+{{end}}
+var preview = document.getElementById("idpreview"), count = document.getElementById("count");
+function mint(){
+  for (var i = 0; i < 500; i++) {
+    var id = PREFIX;
+    for (var j = 0; j < 3; j++) id += ALPHABET.charAt(Math.floor(Math.random() * ALPHABET.length));
+    if (!TAKEN[id]) { TAKEN[id] = true; return id; }
+  }
+  return PREFIX + "???";
+}
+function draw(){
+  var want = Math.max(1, Math.min(40, parseInt(count.value, 10) || 1));
+  var have = preview.children.length;
+  for (var i = have; i < want; i++) {
+    var box = document.createElement("div");
+    box.className = "idcard";
+    var id = mint();
+    box.innerHTML = '<span>' + id + '</span><input type="hidden" name="id" value="' + id + '">';
+    preview.appendChild(box);
+  }
+  while (preview.children.length > want) {
+    var last = preview.lastElementChild;
+    delete TAKEN[last.querySelector("input").value];
+    preview.removeChild(last);
+  }
+}
+count.addEventListener("input", draw);
+document.getElementById("reroll").addEventListener("click", function(){
+  Array.prototype.forEach.call(preview.querySelectorAll("input"), function(i){ delete TAKEN[i.value]; });
+  preview.innerHTML = "";
+  draw();
+});
+draw();
+var st = document.getElementById("strain"), sp = document.getElementById("species");
+st.addEventListener("change", function(){
+  var hit = pairs[st.value.trim()];
+  if (hit && !sp.value.trim()) sp.value = hit;
 });
 </script>
 {{template "foot" .}}{{end}}

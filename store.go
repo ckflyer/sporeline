@@ -37,6 +37,26 @@ var Kinds = []Kind{
 		[]string{"Monotub", "Bag", "Bucket", "Tray", "Log", "Outdoor bed"}},
 }
 
+// Title is what to call this entry. A strain name is the thing you
+// actually say out loud, so it leads; species is the formal backing.
+func (c *Component) Title() string {
+	if c.Strain != "" {
+		return c.Strain
+	}
+	if c.Species != "" {
+		return c.Species
+	}
+	return "Unnamed"
+}
+
+// Sub is the quieter half of the name, empty when there is nothing to add.
+func (c *Component) Subtitle() string {
+	if c.Strain != "" && c.Species != "" {
+		return c.Species
+	}
+	return ""
+}
+
 func KindOf(key string) Kind {
 	for _, k := range Kinds {
 		if k.Key == key {
@@ -47,22 +67,24 @@ func KindOf(key string) Kind {
 }
 
 type Component struct {
-	ID      string   `json:"id"` // SE1K7P — prefix, generation, three random
-	Kind    string   `json:"kind"`
-	Sub     string   `json:"sub,omitempty"`
-	Species string   `json:"species"`
-	Gen     int      `json:"gen"`
-	Created string   `json:"created"` // YYYY-MM-DD
-	Notes   string   `json:"notes,omitempty"`
-	Remarks string   `json:"remarks,omitempty"` // genetic remarks, grows
-	Yield   float64  `json:"yield,omitempty"`   // grams, grows
-	Flushes string   `json:"flushes,omitempty"` // free text: "1st 340g, 2nd 190g"
-	Gone    bool     `json:"gone"`
-	GoneAt  string   `json:"goneAt,omitempty"`
-	Parents []string `json:"parents"`
-	Pics    []string `json:"pics,omitempty"`   // filenames inside pics/
-	Legacy  string   `json:"legacy,omitempty"` // old mycolog token, kept so old labels still find things
-	Added   int64    `json:"added"`
+	ID         string   `json:"id"` // SE1K7P — prefix, generation, three random
+	Kind       string   `json:"kind"`
+	Sub        string   `json:"sub,omitempty"`
+	Strain     string   `json:"strain,omitempty"` // what you call it; leads the display
+	Species    string   `json:"species"`          // the formal name behind it
+	Gen        int      `json:"gen"`
+	Created    string   `json:"created"` // YYYY-MM-DD
+	Notes      string   `json:"notes,omitempty"`
+	Remarks    string   `json:"remarks,omitempty"` // genetic remarks, grows
+	Yield      float64  `json:"yield,omitempty"`   // grams, grows
+	Flushes    string   `json:"flushes,omitempty"` // free text: "1st 340g, 2nd 190g"
+	Gone       bool     `json:"gone"`
+	GoneAt     string   `json:"goneAt,omitempty"`
+	GoneReason string   `json:"goneReason,omitempty"` // used / contaminated / discarded / lost / unknown
+	GoneNote   string   `json:"goneNote,omitempty"`   // what actually happened
+	Parents    []string `json:"parents"`
+	Pics       []string `json:"pics,omitempty"` // filenames inside pics/
+	Added      int64    `json:"added"`
 }
 
 type Ingredient struct {
@@ -84,10 +106,47 @@ type Recipe struct {
 
 var Categories = []string{"Agar", "Liquid culture", "Grain", "Substrate", "Other"}
 
+// Why something is no longer around. Kept as its own field rather than
+// buried in notes, so a season of entries can answer questions like
+// which genetic contaminates most.
+type GoneReason struct {
+	Key   string
+	Label string
+	Color string
+}
+
+var GoneReasons = []GoneReason{
+	{"used", "Used up", "#63715F"},
+	{"contaminated", "Contaminated", "#9A3A2C"},
+	{"discarded", "Thrown out", "#8A7A53"},
+	{"lost", "Died or lost", "#6B7566"},
+	{"unknown", "Not recorded", "#9AA394"},
+}
+
+func GoneReasonLabel(key string) string {
+	for _, r := range GoneReasons {
+		if r.Key == key {
+			return r.Label
+		}
+	}
+	return "Gone"
+}
+
+type Settings struct {
+	BackupsOn  bool   `json:"backupsOn"`
+	BackupKeep int    `json:"backupKeep"`
+	LastBackup string `json:"lastBackup,omitempty"`
+}
+
+func defaultSettings() Settings {
+	return Settings{BackupsOn: true, BackupKeep: 30}
+}
+
 type Data struct {
 	Version    int          `json:"version"`
 	Components []*Component `json:"components"`
 	Recipes    []*Recipe    `json:"recipes"`
+	Settings   Settings     `json:"settings"`
 }
 
 // ---------- store ----------
@@ -103,8 +162,11 @@ func OpenStore(dir string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Join(dir, "pics"), 0o755); err != nil {
 		return nil, err
 	}
+	if err := os.MkdirAll(filepath.Join(dir, "backups"), 0o755); err != nil {
+		return nil, err
+	}
 	s := &Store{dir: dir, file: filepath.Join(dir, "sporeline.json")}
-	s.data = Data{Version: 1}
+	s.data = Data{Version: 1, Settings: defaultSettings()}
 	b, err := os.ReadFile(s.file)
 	if err == nil {
 		if err := json.Unmarshal(b, &s.data); err != nil {
@@ -116,11 +178,15 @@ func OpenStore(dir string) (*Store, error) {
 	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
+	if s.data.Settings.BackupKeep == 0 {
+		s.data.Settings = defaultSettings()
+	}
 	return s, nil
 }
 
-func (s *Store) PicsDir() string { return filepath.Join(s.dir, "pics") }
-func (s *Store) Dir() string     { return s.dir }
+func (s *Store) PicsDir() string    { return filepath.Join(s.dir, "pics") }
+func (s *Store) BackupsDir() string { return filepath.Join(s.dir, "backups") }
+func (s *Store) Dir() string        { return s.dir }
 
 // flush writes atomically: temp file, then rename over the original.
 func (s *Store) flush() error {
@@ -213,6 +279,10 @@ func (s *Store) Seen(field string) []string {
 			if c.Species != "" {
 				set[c.Species] = true
 			}
+		case "strain":
+			if c.Strain != "" {
+				set[c.Strain] = true
+			}
 		case "sub":
 			if c.Sub != "" {
 				set[c.Sub] = true
@@ -224,6 +294,21 @@ func (s *Store) Seen(field string) []string {
 		out = append(out, k)
 	}
 	sort.Strings(out)
+	return out
+}
+
+// StrainSpecies remembers which species you paired a strain with, so
+// typing a strain you have used before fills the species in for you.
+func (s *Store) StrainSpecies() map[string]string {
+	out := map[string]string{}
+	for _, c := range s.All() { // All() is newest first, so keep the first hit
+		if c.Strain == "" || c.Species == "" {
+			continue
+		}
+		if _, seen := out[c.Strain]; !seen {
+			out[c.Strain] = c.Species
+		}
+	}
 	return out
 }
 
@@ -312,6 +397,36 @@ func (s *Store) Add(c *Component) error {
 	}
 	s.mu.Lock()
 	s.data.Components = append(s.data.Components, c)
+	err := s.flush()
+	s.mu.Unlock()
+	return err
+}
+
+// AddImported keeps an entry exactly as it arrived: its own ID, its own
+// generation. Nothing is renamed on the way in.
+func (s *Store) AddImported(c *Component) error {
+	if c.ID == "" {
+		return fmt.Errorf("imported entry has no ID")
+	}
+	if c.Added == 0 {
+		c.Added = time.Now().UnixNano()
+	}
+	s.mu.Lock()
+	s.data.Components = append(s.data.Components, c)
+	err := s.flush()
+	s.mu.Unlock()
+	return err
+}
+
+func (s *Store) Settings() Settings {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.data.Settings
+}
+
+func (s *Store) SetSettings(fn func(*Settings)) error {
+	s.mu.Lock()
+	fn(&s.data.Settings)
 	err := s.flush()
 	s.mu.Unlock()
 	return err

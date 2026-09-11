@@ -1,7 +1,7 @@
 {{define "recipes.html"}}{{template "head" .}}
 <div class="pagehead">
   <div><h1>Recipes</h1>
-  <p class="sub">Agar pours, LC broths, grain preps, substrate mixes. Written once, scaled when you need a bigger batch.</p></div>
+  <p class="sub">Written once, scaled when you need a bigger batch.</p></div>
   <a class="btn" href="/recipe-form">Add recipe</a>
 </div>
 {{if .Data}}
@@ -15,7 +15,7 @@
 {{else}}
 <div class="empty">
   <h2>No recipes yet</h2>
-  <p>Start with the one you would otherwise dig out of a forum thread at 11pm.</p>
+
   <p><a class="btn" href="/recipe-form">Add your first recipe</a></p>
 </div>
 {{end}}

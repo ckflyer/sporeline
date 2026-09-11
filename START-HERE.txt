@@ -15,17 +15,19 @@ Quick start
 
 Coming from mycolog
 -------------------
-   python convert_mycolog.py "C:\Users\<you>\mycolog"
-
-Then in Sporeline: Data -> Import -> pick the file it wrote.
-Your existing mycolog IDs carry over unchanged, so labels already on
+Close mycolog, then go to Data -> Import and choose "A mycolog folder".
+Nothing else to install. IDs carry over unchanged, so labels already on
 your jars stay correct.
+
+Backups
+-------
+Sporeline copies your log into a backups folder once a day when it
+starts, and before any import. See the Settings page.
 
 What else is in here
 --------------------
    README.md            the full documentation, ready for GitHub
    NOTICE               attribution for mycolog, which this follows
-   convert_mycolog.py   the mycolog importer
    assets/ tmpl/ *.go   the source, buildable with: go build .
 
 Note: .gitignore excludes sporeline.exe on purpose. Built binaries

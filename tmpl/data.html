@@ -3,40 +3,98 @@
 <h1>Your data</h1>
 <p class="sub">Everything Sporeline knows lives in one folder on this computer. No account, no server, nothing leaves the machine.</p>
 {{if $d.Notice}}<div class="notice">{{$d.Notice}}</div>{{end}}
-<div class="cols">
-  <div>
-    <div class="panel">
-      <h3>Where it lives</h3>
-      <p style="font-family:var(--mono);font-size:13px;word-break:break-all;margin:0 0 8px">{{$d.Dir}}</p>
-      <p class="hint">Inside: <code>sporeline.json</code> holds your log, <code>pics/</code> holds your pictures. Copy that folder and you have copied everything.</p>
-      <dl class="kv" style="margin-top:12px">
-        <dt>Cultures</dt><dd>{{$d.Count}}</dd>
-        <dt>Recipes</dt><dd>{{$d.Recipes}}</dd>
-        <dt>Pictures</dt><dd>{{$d.Pics}}</dd>
-      </dl>
-    </div>
-    <div class="panel">
-      <h3>Backup</h3>
-      <p style="margin:0 0 10px">Save a single file with every culture and recipe in it.</p>
-      <a class="btn" href="/export">Save backup file</a>
-      <p class="hint">Pictures stay in the pics folder — copy the whole folder for a complete backup.</p>
-    </div>
-  </div>
-  <div>
-    <div class="panel">
-      <h3>Import</h3>
-      <p style="margin:0 0 10px">Load a Sporeline backup, or a file converted from mycolog.</p>
-      <form method="post" action="/import" enctype="multipart/form-data">
-        <label class="f"><span>File</span><input type="file" name="file" accept="application/json,.json" required></label>
-        <label class="f"><span>How</span>
-          <select name="mode">
-            <option value="merge">Add to what is already here</option>
-            <option value="replace">Replace everything</option>
-          </select></label>
-        <button class="btn">Import</button>
-      </form>
-      <p class="hint">Merging skips anything whose ID you already have, so importing twice is harmless.</p>
-    </div>
-  </div>
+<div class="panel">
+  <h3>Where it lives</h3>
+  <p style="font-family:var(--mono);font-size:13px;word-break:break-all;margin:0 0 8px">{{$d.Dir}}</p>
+  <p class="hint">Copy this folder and you have copied everything: your log, your pictures and the backups.</p>
+  <dl class="kv" style="margin-top:14px">
+    <dt>Cultures</dt><dd>{{$d.Count}}</dd>
+    <dt>Recipes</dt><dd>{{$d.Recipes}}</dd>
+    <dt>Pictures</dt><dd>{{$d.Pics}}</dd>
+  </dl>
 </div>
+
+<div class="panel">
+  <h3>Backup</h3>
+  <div class="btnrow">
+    <a class="btn" href="/export">Save backup file</a>
+    <form method="post" action="/backup/now" style="margin:0"><button class="btn ghost">Back up now</button></form>
+  </div>
+  <p class="hint">One file with every culture and recipe. Pictures stay in the pics folder.{{if $d.S.LastBackup}} Last backup {{$d.S.LastBackup}}.{{end}}</p>
+</div>
+
+<div class="panel">
+  <h3>Automatic backups</h3>
+  <form method="post" action="/settings">
+    <label class="checkline">
+      <input type="checkbox" name="backupsOn" value="1" {{if $d.S.BackupsOn}}checked{{end}}>
+      <span>Back up once a day, and before every import</span>
+    </label>
+    <div class="inlineform">
+      <label class="f"><span>How many to keep</span>
+        <input type="number" name="keep" min="1" max="500" value="{{$d.S.BackupKeep}}"></label>
+      <button class="btn">Save</button>
+    </div>
+  </form>
+  <p class="hint">Kept in <code>{{$d.BackupsDir}}</code></p>
+</div>
+
+{{if $d.Backups}}
+<div class="panel">
+  <h3>Restore</h3>
+  <p class="hint" style="margin:0 0 10px">Replaces everything in your log. The current version is backed up first.</p>
+  <table style="border:0"><tbody>
+  {{range $d.Backups}}
+    <tr>
+      <td style="padding:7px 0"><a href="/backup/{{.Name}}">{{.When.Format "2 Jan 2006, 15:04"}}</a>
+        <div class="hint">{{.Name}}</div></td>
+      <td style="padding:7px 0;text-align:right">
+        <form method="post" action="/backup/restore" onsubmit="return confirm('Replace everything in your log with this backup?')" style="margin:0">
+          <input type="hidden" name="name" value="{{.Name}}">
+          <button class="btn ghost sm">Restore</button></form></td>
+    </tr>
+  {{end}}
+  </tbody></table>
+</div>
+{{end}}
+
+<div class="panel">
+  <h3>Import</h3>
+  <form method="post" action="/import" enctype="multipart/form-data">
+    <label class="f" style="max-width:320px"><span>Where from</span>
+      <select name="source" id="source">
+        <option value="sporeline">A Sporeline backup file</option>
+        <option value="mycolog">A mycolog folder</option>
+      </select></label>
+
+    <div id="src-sporeline">
+      <label class="f"><span>File</span><input type="file" name="file" accept="application/json,.json"></label>
+      <label class="f" style="max-width:320px"><span>How</span>
+        <select name="mode">
+          <option value="merge">Add to what is here</option>
+          <option value="replace">Replace everything</option>
+        </select></label>
+    </div>
+
+    <div id="src-mycolog" hidden>
+      <label class="f"><span>Folder</span>
+        <input type="text" name="path" value="{{$d.GuessPath}}" placeholder="C:\Users\you\mycolog">
+        <p class="hint">{{if $d.GuessFound}}Found a database here.{{else}}Close mycolog first.{{end}}</p></label>
+      <p class="hint">IDs come across unchanged, and that folder is only read.</p>
+    </div>
+
+    <button class="btn">Import</button>
+  </form>
+  <p class="hint">Backed up first; anything already here is left alone.</p>
+</div>
+
+
+<script>
+var src = document.getElementById("source");
+function swap(){
+  document.getElementById("src-sporeline").hidden = src.value !== "sporeline";
+  document.getElementById("src-mycolog").hidden = src.value !== "mycolog";
+}
+src.addEventListener("change", swap); swap();
+</script>
 {{template "foot" .}}{{end}}

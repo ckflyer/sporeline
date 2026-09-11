@@ -62,17 +62,28 @@ not make yourself. Past nine the generation becomes a letter, so an ID is always
 six characters. The random part skips I, O and 0 — the characters you misread off
 a piece of tape six weeks later.
 
+## Names
+
+Two fields. **Strain** is what you call it and leads everywhere it is shown;
+**species** is the formal name behind it, shown alongside. If you only know the
+species, that stands on its own. Typing a strain you have used before fills in
+the species you paired it with last time.
+
 ## Coming from mycolog
 
-```
-python convert_mycolog.py "C:\Users\<you>\mycolog"
-```
+Close mycolog, then go to **Data → Import**, pick "A mycolog folder", and give it
+your mycolog folder. No separate script, no conversion step.
 
-Then in Sporeline: **Data → Import** and pick the file it wrote.
+Cultures, lineage, notes, yields and pictures all come across, and IDs are
+carried over exactly as they were, so labels already on your jars stay correct.
+That folder is only read, never changed, and Sporeline backs up its own log
+first.
 
-Your existing mycolog IDs are carried over exactly, so labels already on your
-jars stay correct. Only entries you create in Sporeline get the new style. The
-converter reads your mycolog folder and changes nothing in it.
+## Backups
+
+Sporeline copies your log into a `backups` folder once a day when it starts, and
+always before an import or a restore. Thirty are kept by default; change that, or
+restore an earlier copy, on the **Settings** page.
 
 ## Building
 

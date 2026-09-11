@@ -229,9 +229,9 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 		if c.Gone {
 			op = "0.55"
 		}
-		label := c.Species
+		label := c.Title()
 		if c.Sub != "" {
-			label = c.Sub
+			label = label + " · " + c.Sub
 		}
 		fmt.Fprintf(&b, `<a href="/component/%s"><g opacity="%s">`, html.EscapeString(c.ID), op)
 		fmt.Fprintf(&b, `<rect x="%d" y="%d" width="%d" height="%d" rx="6" fill="#FBFCF5" stroke="%s" stroke-width="%s"/>`,
@@ -240,7 +240,7 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 		fmt.Fprintf(&b, `<text x="%d" y="%d" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#16211A">%s</text>`,
 			p.x+12, p.y+19, html.EscapeString(c.ID))
 		fmt.Fprintf(&b, `<text x="%d" y="%d" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10.5" fill="#63715F">%s</text>`,
-			p.x+12, p.y+34, html.EscapeString(clip(label, 20)))
+			p.x+12, p.y+34, html.EscapeString(clip(label, 22)))
 		if c.Gone {
 			fmt.Fprintf(&b, `<text x="%d" y="%d" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="8" fill="#9A3A2C" text-anchor="end">GONE</text>`,
 				p.x+nodeW-8, p.y+15)

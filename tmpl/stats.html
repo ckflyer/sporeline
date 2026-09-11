@@ -1,0 +1,97 @@
+{{define "stats.html"}}{{template "head" .}}
+{{$s := .Data}}
+<h1>Statistics</h1>
+<p class="sub">Worked out from your log as it stands.</p>
+
+{{if not $s.Total}}
+<div class="empty"><h2>Nothing to count yet</h2><p>Add a few cultures and this page fills itself in.</p></div>
+{{else}}
+
+{{if not $s.Enough}}<p class="chips"><span class="label">Only {{$s.Total}} entries so far — these move a lot until there are more.</span></p>{{end}}
+
+<div class="panel">
+  <h3>Overview</h3>
+  <div class="statgrid">
+    <div><b>{{$s.Total}}</b><span>logged</span></div>
+    <div><b>{{$s.OnHand}}</b><span>on hand</span></div>
+    <div><b>{{$s.Gone}}</b><span>gone</span></div>
+    <div><b>{{$s.Strains}}</b><span>strains</span></div>
+    <div><b>{{$s.SpeciesCount}}</b><span>species</span></div>
+    <div><b>{{$s.Pictures}}</b><span>pictures</span></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>By kind</h3>
+  <table style="border:0"><tbody>
+  {{range $s.Kinds}}{{if .Total}}
+    <tr>
+      <td style="width:170px"><span class="tag"><i style="background:{{.Kind.Color}}"></i>{{.Kind.Plural}}</span></td>
+      <td style="font-family:var(--mono)">{{.Total}}</td>
+      <td style="color:var(--muted)">{{.OnHand}} on hand · {{.Gone}} gone</td>
+    </tr>
+  {{end}}{{end}}
+  </tbody></table>
+</div>
+
+<div class="panel">
+  <h3>Contamination</h3>
+  <div class="statgrid" style="margin-bottom:16px">
+    <div><b>{{$s.ContamRate}}%</b><span>contamination rate</span></div>
+    <div><b>{{$s.Contaminated}}</b><span>lost to contam</span></div>
+    <div><b>{{$s.Total}}</b><span>out of</span></div>
+  </div>
+  {{if $s.ByStage}}
+  <table style="border:0"><tbody>
+  {{range $s.ByStage}}
+    <tr>
+      <td style="width:150px">{{.Label}}</td>
+      <td style="font-family:var(--mono);width:78px;color:var(--muted)">{{.Lost}}/{{.Total}}</td>
+      <td><div class="bar"><span style="width:{{.Percent}}%"></span></div></td>
+      <td style="color:var(--muted);width:52px;text-align:right">{{.Percent}}%</td>
+    </tr>
+  {{end}}
+  </tbody></table>
+  <p class="hint">Which step you lose things at.</p>
+  {{end}}
+</div>
+
+{{if $s.GrowsWithYield}}
+<div class="panel">
+  <h3>Harvest</h3>
+  <div class="statgrid">
+    <div><b>{{grams $s.TotalYield}}</b><span>total</span></div>
+    <div><b>{{grams $s.AvgYield}}</b><span>average per grow</span></div>
+    <div><b>{{$s.GrowsWithYield}}</b><span>grows weighed</span></div>
+  </div>
+  {{if $s.BestGrow}}<p class="hint">Best single grow: <a href="/component/{{$s.BestGrow.ID}}">{{$s.BestGrow.ID}}</a>, {{$s.BestGrow.Title}}, {{grams $s.BestGrow.Yield}}.</p>{{end}}
+</div>
+{{end}}
+
+<div class="panel">
+  <h3>By strain</h3>
+  <table>
+    <thead><tr><th>Strain</th><th>Logged</th><th class="hide-s">Lost to contamination</th><th class="hide-s">Grows</th><th>Average yield</th></tr></thead>
+    <tbody>
+    {{range $s.Strain}}
+      <tr>
+        <td>{{.Name}}</td>
+        <td style="font-family:var(--mono)">{{.Total}}</td>
+        <td class="hide-s" style="color:var(--muted)">{{if .Lost}}{{.Lost}} · {{.LossPercent}}%{{else}}—{{end}}</td>
+        <td class="hide-s" style="color:var(--muted)">{{if .Grows}}{{.Grows}}{{else}}—{{end}}</td>
+        <td style="font-family:var(--mono)">{{if .AvgYield}}{{grams .AvgYield}}{{else}}—{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+{{if $s.OldestOnHand}}
+<div class="panel">
+  <h3>Oldest thing you still have</h3>
+  <p style="margin:0"><a href="/component/{{$s.OldestOnHand.ID}}">{{$s.OldestOnHand.ID}}</a> — {{$s.OldestOnHand.Title}}, started {{date $s.OldestOnHand.Created}}, {{$s.OldestAge}} days ago.</p>
+</div>
+{{end}}
+
+{{end}}
+{{template "foot" .}}{{end}}

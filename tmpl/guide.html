@@ -9,6 +9,11 @@
   </dl>
 </div>
 <div class="panel">
+  <h3>Names</h3>
+  <p>Two fields: <strong>strain</strong> is what you call it, <strong>species</strong> is the formal name behind it. The strain leads everywhere it is shown, with the species alongside; if you only know the species, that stands on its own.</p>
+  <p>Type a strain you have used before and the species fills itself in. Change it whenever the pairing is different.</p>
+</div>
+<div class="panel">
   <h3>IDs</h3>
   <p>Every entry gets a six character ID like <code>MY2K7P</code>. The first two letters are the kind, the next character is the generation, and the last three are random.</p>
   <p>So <code>MY2K7P</code> reads as: mycelium, second generation, and <code>K7P</code> tells it apart from your other second generation plates. Generation 0 is anything you did not make yourself. Ten and beyond use a letter, so an ID is always six characters.</p>
@@ -20,21 +25,14 @@
 </div>
 <div class="panel">
   <h3>Gone, not deleted</h3>
-  <p>When you use up a jar or toss a contaminated tub, mark it <em>gone</em>. It stays in your log and in the family tree forever, just dimmed. Deleting is only for entries you created by mistake.</p>
+  <p>Everything is either <em>on hand</em> or <em>gone</em>. When you use up a jar or toss a contaminated tub, mark it gone and say what happened — that reason shows as a small label on the entry. It stays in your log and in the family tree forever, just dimmed.</p>
+  <p>Recording the reason is worth the extra two seconds: after a season you can filter for everything lost to contamination and see whether it clusters on one genetic, one step, or one time of year. Deleting is only for entries you created by mistake.</p>
 </div>
 <div class="panel">
   <h3>Your data</h3>
-  <p>Everything lives in a folder on this computer: <code>{{.Data}}</code>. Nothing is sent anywhere. Back that folder up, or use the button on the <a href="/data">Data</a> page.</p>
+  <p>Everything lives in a folder on this computer: <code>{{.Data}}</code>. Nothing is sent anywhere.</p>
+  <p>Sporeline also keeps dated copies of your log in a <code>backups</code> folder inside it, one a day, so a mistake is something you can undo. You can change that on the <a href="/settings">Settings</a> page.</p>
 </div>
-<div class="panel">
-  <h3>Credit where it is due</h3>
-  <p>Sporeline follows the design of <a href="https://codesoap.github.io/mycolog/" target="_blank" rel="noreferrer">mycolog</a>
-  by Richard Ulmer, which is MIT licensed. The four kinds of component, keeping things you no longer own instead of
-  deleting them, the family tree rules, and the label alphabet that skips I, O and 0 are all his ideas.</p>
-  <p>Sporeline is a separate program rather than a fork — none of his code is in it — but it would not exist without
-  mycolog, and if you want a smaller tool backed by SQLite, use his.</p>
-</div>
-
 <p><a class="btn" href="/add?kind=spores">Add your first spores</a> <a class="btn ghost" href="/list/all">Go to the log</a></p>
 </div>
 {{template "foot" .}}{{end}}

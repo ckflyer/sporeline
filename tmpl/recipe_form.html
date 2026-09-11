@@ -1,30 +1,36 @@
 {{define "recipe_form.html"}}{{template "head" .}}
 {{$r := .Data}}
+<p class="back"><a href="{{if $r.ID}}/recipe/{{$r.ID}}{{else}}/recipes{{end}}">← {{if $r.ID}}{{$r.Title}}{{else}}Recipes{{end}}</a></p>
 <h1>{{if $r.ID}}Edit recipe{{else}}New recipe{{end}}</h1>
 <form method="post" action="/recipe">
   <input type="hidden" name="id" value="{{$r.ID}}">
-  <div class="panel" style="max-width:680px">
-    <div class="grid2">
-      <label class="f"><span>Name</span><input type="text" name="title" value="{{$r.Title}}" placeholder="MEA plates" autofocus></label>
-      <label class="f"><span>Makes</span><input type="text" name="yield" value="{{$r.Yield}}" placeholder="1 L, about 25 plates"></label>
+  <div class="panel">
+    <h3>Name</h3>
+    <label class="f"><span>Name</span><input type="text" name="title" value="{{$r.Title}}" placeholder="MEA plates" autofocus></label>
+  </div>
+  <div class="panel">
+    <h3>Makes</h3>
+    <label class="f"><span>Makes {{help "Numbers written here scale along with the ingredients."}}</span>
+      <input type="text" name="yield" value="{{$r.Yield}}" placeholder="1 L, about 25 plates"></label>
+  </div>
+  <div class="panel">
+    <h3>Ingredients</h3>
+    <div id="ings">
+      {{range $r.Ingredients}}
+      <div class="ingrow">
+        <input type="text" name="amount" value="{{.Amount}}" placeholder="20">
+        <input type="text" name="unit" value="{{.Unit}}" placeholder="g">
+        <input type="text" name="name" value="{{.Name}}" placeholder="light malt extract">
+      </div>{{end}}
     </div>
-    <label class="f"><span>Ingredients</span>
-      <div id="ings">
-        {{range $r.Ingredients}}
-        <div class="ingrow">
-          <input type="text" name="amount" value="{{.Amount}}" placeholder="20">
-          <input type="text" name="unit" value="{{.Unit}}" placeholder="g">
-          <input type="text" name="name" value="{{.Name}}" placeholder="light malt extract">
-        </div>{{end}}
-      </div>
-      <div class="rowline" style="margin-top:2px">
-        <button type="button" class="plus" id="adding" title="Add another ingredient">+</button>
-        <span class="hint" style="margin:0">Blank rows are ignored.</span>
-      </div>
-    </label>
+    <button type="button" class="plus" id="adding" title="Add another ingredient">+</button>
+  </div>
+  <div class="panel">
+    <h3>Notes</h3>
     <label class="f"><span>Notes</span>
-      <textarea name="notes" placeholder="Method, sterilization, what to watch for, what you would change" style="min-height:180px">{{$r.Notes}}</textarea></label>
-    <div class="btnrow"><button class="btn">Save recipe</button><a class="btn ghost" href="/recipes">Cancel</a></div>
+      <textarea name="notes" placeholder="Method, sterilization, what to watch for, what you would change" style="min-height:200px">{{$r.Notes}}</textarea></label>
+    <div class="btnrow"><button class="btn">Save recipe</button>
+      <a class="btn ghost" href="{{if $r.ID}}/recipe/{{$r.ID}}{{else}}/recipes{{end}}">Cancel</a></div>
   </div>
 </form>
 <script>

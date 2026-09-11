@@ -113,6 +113,7 @@ func main() {
 	mux.HandleFunc("GET /{$}", handleHome)
 	mux.HandleFunc("GET /list/{kind}", handleList)
 	mux.HandleFunc("GET /component/{id}", handleComponent)
+	mux.HandleFunc("GET /component/{id}/edit", handleComponentEdit)
 	mux.HandleFunc("POST /component/{id}", handleComponentUpdate)
 	mux.HandleFunc("POST /component/{id}/gone", handleGone)
 	mux.HandleFunc("POST /component/{id}/delete", handleDelete)
@@ -126,9 +127,21 @@ func main() {
 	mux.HandleFunc("POST /recipe", handleRecipeSave)
 	mux.HandleFunc("POST /recipe/{id}/delete", handleRecipeDelete)
 	mux.HandleFunc("GET /data", handleDataPage)
+	mux.HandleFunc("GET /stats", func(w http.ResponseWriter, r *http.Request) {
+		render(w, "stats.html", page{Title: "Statistics", Tab: "stats", Data: buildStats()})
+	})
+	mux.HandleFunc("GET /settings", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/data", http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("POST /settings", handleSettingsSave)
+	mux.HandleFunc("POST /backup/now", handleBackupNow)
+	mux.HandleFunc("POST /backup/restore", handleBackupRestore)
+	mux.HandleFunc("GET /backup/{name}", handleBackupDownload)
 	mux.HandleFunc("GET /export", handleExport)
-	mux.HandleFunc("POST /import", handleImport)
+	mux.HandleFunc("POST /import", handleImportAny)
 	mux.HandleFunc("GET /guide", handleGuide)
+
+	store.BackupDaily()
 
 	l, actual, err := listen(*port)
 	if err != nil {

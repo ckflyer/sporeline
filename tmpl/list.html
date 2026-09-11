@@ -3,7 +3,7 @@
 <div class="pagehead">
   <div>
     <h1>{{$d.Kind.Plural}}</h1>
-    <p class="sub">{{if eq $d.KindKey "all"}}Everything you have logged, newest first. Nothing is ever thrown away — cultures you no longer have stay here so the family tree keeps making sense.{{else}}{{$d.Total}} logged.{{end}}</p>
+    <p class="sub">{{$d.Pool}} logged, newest first.</p>
   </div>
   <div class="btnrow">
     {{if eq $d.KindKey "all"}}{{range kinds}}<a class="btn ghost" href="/add?kind={{.Key}}">Add {{.Name}}</a>{{end}}
@@ -11,46 +11,118 @@
   </div>
 </div>
 
-<form class="filters" method="get" id="filterform">
-  <input type="text" name="q" placeholder="Search IDs, species, notes" value="{{$d.Q}}" style="width:250px">
-  <select name="species" onchange="this.form.submit()">
-    <option value="">Any species</option>
-    {{range $d.AllSpecies}}<option {{if eq . $d.Species}}selected{{end}}>{{.}}</option>{{end}}
-  </select>
-  <select name="show" onchange="this.form.submit()">
-    <option value="" {{if eq $d.Show ""}}selected{{end}}>Everything</option>
-    <option value="here" {{if eq $d.Show "here"}}selected{{end}}>Still have it</option>
-    <option value="gone" {{if eq $d.Show "gone"}}selected{{end}}>Gone</option>
-  </select>
-  <button class="btn ghost sm">Search</button>
-  {{if or $d.Q $d.Species $d.Show}}<a class="btn ghost sm" href="/list/{{$d.KindKey}}">Clear</a>{{end}}
-</form>
-{{if or $d.Q $d.Species $d.Show}}<p class="showing">Showing {{$d.Total}} of {{$d.Pool}}.</p>{{end}}
+<form method="get" class="searchbar" id="filterform" data-base="/list/{{$d.KindKey}}">
+  <input type="text" name="q" id="q" placeholder="Search" value="{{$d.Q}}" autocomplete="off">
+  <button type="button" class="btn ghost" id="filterbtn" aria-expanded="{{if $d.Filtered}}true{{else}}false{{end}}">Filter</button>
 
-{{if $d.Items}}
+  <div class="filterpanel" id="filterpanel" {{if not $d.Filtered}}hidden{{end}}>
+    <div class="filterrow">
+      {{if $d.AllStrains}}
+      <label class="f"><span>Strain</span>
+        <select name="strain"><option value="">Any</option>
+          {{range $d.AllStrains}}<option {{if eq . $d.Strain}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+      {{end}}
+      <label class="f"><span>Species</span>
+        <select name="species"><option value="">Any</option>
+          {{range $d.AllSpecies}}<option {{if eq . $d.Species}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+      <label class="f"><span>Status</span>
+        <select name="show">
+          <option value="" {{if eq $d.Show ""}}selected{{end}}>Any</option>
+          <option value="here" {{if eq $d.Show "here"}}selected{{end}}>On hand</option>
+          <option value="gone" {{if eq $d.Show "gone"}}selected{{end}}>Gone</option>
+        </select></label>
+    </div>
+  </div>
+</form>
+
+<div id="results">{{template "list_results" $d}}</div>
+
+<script>
+var form = document.getElementById("filterform"),
+    fb = document.getElementById("filterbtn"),
+    fp = document.getElementById("filterpanel"),
+    results = document.getElementById("results"),
+    timer = null;
+
+fb.addEventListener("click", function(){
+  var open = fp.hasAttribute("hidden");
+  if (open) { fp.removeAttribute("hidden"); } else { fp.setAttribute("hidden",""); }
+  fb.setAttribute("aria-expanded", String(open));
+});
+
+function query(){
+  var p = new URLSearchParams();
+  new FormData(form).forEach(function(v, k){ if (v) p.append(k, v); });
+  return p.toString();
+}
+function refresh(){
+  var qs = query(), url = form.dataset.base + (qs ? "?" + qs : "");
+  fetch(url, {headers: {"X-Partial": "1"}})
+    .then(function(r){ return r.text(); })
+    .then(function(html){
+      results.innerHTML = html;
+      history.replaceState(null, "", url);
+    });
+}
+form.addEventListener("input", function(e){
+  if (e.target.tagName === "SELECT") { refresh(); return; }
+  clearTimeout(timer);
+  timer = setTimeout(refresh, 180);
+});
+form.addEventListener("submit", function(e){ e.preventDefault(); refresh(); });
+results.addEventListener("click", function(e){
+  var clear = e.target.closest(".chip");
+  if (!clear) return;
+  e.preventDefault();
+  var next = new URL(clear.href, location.origin);
+  var p = next.searchParams;
+  ["q","strain","species","show"].forEach(function(name){
+    var field = form.elements[name];
+    if (field) field.value = p.get(name) || "";
+  });
+  refresh();
+});
+</script>
+{{template "foot" .}}{{end}}
+
+{{define "list_results"}}
+{{if .Added}}
+<p class="chips added">Just added:
+  {{range .Added}}<a class="chip" href="/component/{{.}}">{{.}}</a>{{end}}</p>
+{{end}}
+
+{{if .Filtered}}
+<p class="chips">
+  Showing {{.Total}} of {{.Pool}}
+  {{$k := .KindKey}}
+  {{if .Q}}<a class="chip" href="/list/{{$k}}?{{if .Strain}}strain={{.Strain}}&{{end}}{{if .Species}}species={{.Species}}&{{end}}{{if .Show}}show={{.Show}}{{end}}">“{{.Q}}” ×</a>{{end}}
+  {{if .Strain}}<a class="chip" href="/list/{{$k}}?{{if .Q}}q={{.Q}}&{{end}}{{if .Species}}species={{.Species}}&{{end}}{{if .Show}}show={{.Show}}{{end}}">{{.Strain}} ×</a>{{end}}
+  {{if .Species}}<a class="chip" href="/list/{{$k}}?{{if .Q}}q={{.Q}}&{{end}}{{if .Strain}}strain={{.Strain}}&{{end}}{{if .Show}}show={{.Show}}{{end}}">{{.Species}} ×</a>{{end}}
+  {{if .Show}}<a class="chip" href="/list/{{$k}}?{{if .Q}}q={{.Q}}&{{end}}{{if .Strain}}strain={{.Strain}}&{{end}}{{if .Species}}species={{.Species}}{{end}}">{{if eq .Show "gone"}}Gone{{else}}On hand{{end}} ×</a>{{end}}
+  <a class="chip clear" href="/list/{{$k}}">Clear all</a>
+</p>
+{{end}}
+
+{{if .Items}}
 <table>
-  <thead><tr>
-    <th>ID</th><th>Species</th><th class="hide-s">Type</th><th class="hide-s">Started</th>
-    <th class="hide-s">Age</th><th>Status</th>
-  </tr></thead>
+  <thead><tr><th>ID</th><th>Name</th><th class="hide-s">Type</th><th class="hide-s">Started</th><th>Status</th></tr></thead>
   <tbody>
-  {{range $d.Items}}{{$k := kindOf .Kind}}
+  {{range .Items}}{{$kind := kindOf .Kind}}
     <tr {{if .Gone}}class="gone"{{end}}>
       <td class="id"><a href="/component/{{.ID}}">{{.ID}}</a></td>
-      <td>{{.Species}}{{if .Sub}} <span style="color:var(--muted)">· {{.Sub}}</span>{{end}}</td>
-      <td class="hide-s"><span class="tag"><i style="background:{{$k.Color}}"></i>{{$k.Name}}</span></td>
+      <td><a href="/component/{{.ID}}" class="plain">{{.Title}}</a>{{with .Subtitle}} <span style="color:var(--muted)">{{.}}</span>{{end}}{{if .Sub}} <span style="color:var(--muted)">· {{.Sub}}</span>{{end}}</td>
+      <td class="hide-s"><span class="tag"><i style="background:{{$kind.Color}}"></i>{{$kind.Name}}</span></td>
       <td class="hide-s">{{date .Created}}</td>
-      <td class="hide-s" style="color:var(--muted)">{{since .Created}}</td>
-      <td>{{if .Gone}}<span class="badge gone">gone</span>{{else}}<span style="color:var(--muted)">have it</span>{{end}}</td>
+      <td>{{if .Gone}}<span class="badge gone">Gone</span>{{if ne .GoneReason "unknown"}} <span class="label">{{goneLabel .GoneReason}}</span>{{end}}{{else}}<span style="color:var(--muted)">On hand</span>{{end}}</td>
     </tr>
   {{end}}
   </tbody>
 </table>
 {{else}}
 <div class="empty">
-  <h2>Nothing here yet</h2>
-  <p>{{if eq $d.KindKey "all"}}Start with what you actually have in hand — a print, a syringe, a plate someone gave you. That is generation zero.{{else}}No {{$d.Kind.Plural}} logged yet.{{end}}</p>
-  <p><a class="btn" href="/add?kind={{if eq $d.KindKey "all"}}spores{{else}}{{$d.KindKey}}{{end}}">Add {{if eq $d.KindKey "all"}}Spores{{else}}{{$d.Kind.Name}}{{end}}</a></p>
+  <h2>{{if .Filtered}}Nothing matches{{else}}Nothing here yet{{end}}</h2>
+  {{if .Filtered}}<p><a class="btn ghost" href="/list/{{.KindKey}}">Clear filters</a></p>
+  {{else}}<p><a class="btn" href="/add?kind={{if eq .KindKey "all"}}spores{{else}}{{.KindKey}}{{end}}">Add {{if eq .KindKey "all"}}Spores{{else}}{{.Kind.Name}}{{end}}</a></p>{{end}}
 </div>
 {{end}}
-{{template "foot" .}}{{end}}
+{{end}}
