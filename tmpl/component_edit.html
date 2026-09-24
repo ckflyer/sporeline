@@ -1,68 +1,74 @@
 {{define "component_edit.html"}}{{template "head" .}}
 {{$d := .Data}}{{$c := $d.C}}
 <p class="back"><a href="/component/{{$c.ID}}">← {{$c.ID}}</a></p>
-<h1>Edit {{$c.ID}}</h1>
-<p class="sub">{{$d.Kind.Name}}, started {{date $c.Created}}.</p>
 
 <form method="post" action="/component/{{$c.ID}}">
-  <div class="panel">
-    <h3>What it is</h3>
+<div class="pagehead">
+  <div>
+    <h1 class="idbig"><i class="kinddot" style="background:{{$d.Kind.Color}}"></i>{{$c.ID}}</h1>
+    <p class="sub" style="margin:4px 0 0">Editing · {{$d.Kind.Name}}, started {{date $c.Created}}</p>
+  </div>
+  <div class="headactions">
+    <a class="btn ghost" href="/component/{{$c.ID}}">Cancel</a>
+    <button class="btn">Save changes</button>
+  </div>
+</div>
+
+<div class="sheet">
+  <section>
+    <h4>Details</h4>
     <div class="grid2">
       <label class="f"><span>Strain</span>
         <input type="text" id="strain" name="strain" value="{{$c.Strain}}" list="strain-list" autocomplete="off" placeholder="Blue Oyster">
-        <datalist id="strain-list">{{range $d.AllStrains}}<option value="{{.}}">{{end}}</datalist>
-</label>
+        <datalist id="strain-list">{{range $d.AllStrains}}<option value="{{.}}">{{end}}</datalist></label>
       <label class="f"><span>Species</span>
         <input type="text" id="species" name="species" value="{{$c.Species}}" list="species-list" autocomplete="off" placeholder="Pleurotus ostreatus">
         <datalist id="species-list">{{range $d.AllSpecies}}<option value="{{.}}">{{end}}</datalist></label>
     </div>
     <label class="checkline" style="margin:-2px 0 14px">
-      <input type="checkbox" name="spread" value="1" checked>
-      <span>Rename everywhere related {{help "Applies the new name to every culture that shares genetics with this one — useful when you finally identify something."}}</span>
+      <input type="checkbox" name="spread" value="1">
+      <span>Rename everywhere related {{help "Tick this to give the new name to every connected culture that had the old name — parents, children, and anything crossed with them. Useful when you finally identify a wild collection. Left unticked, only this entry changes."}}</span>
     </label>
     <div class="grid2">
-      <label class="f"><span>Type</span>
+      <label class="f"><span>Form {{help "What it is kept in or on: an agar plate, a liquid culture, rye grain, a monotub. Optional."}}</span>
         <input type="text" name="sub" value="{{$c.Sub}}" list="sub-list" autocomplete="off" placeholder="optional">
         <datalist id="sub-list">{{range $d.Subs}}<option value="{{.}}">{{end}}</datalist></label>
       <label class="f"><span>Started</span><input type="date" name="created" value="{{$c.Created}}"></label>
     </div>
-  </div>
+  </section>
 
   {{if eq $c.Kind "grow"}}
-  <div class="panel">
-    <h3>Harvest</h3>
+  <section>
+    <h4>Harvest</h4>
     <div class="grid2">
       <label class="f"><span>Total yield (grams)</span><input type="number" step="0.1" min="0" name="yield" value="{{if $c.Yield}}{{grams $c.Yield}}{{end}}" placeholder="0"></label>
       <label class="f"><span>Flushes</span><input type="text" name="flushes" value="{{$c.Flushes}}" placeholder="1st 340, 2nd 190"></label>
     </div>
-  </div>
+  </section>
   {{end}}
 
-  <div class="panel">
-    <h3>Genetic remarks {{help "Kept apart from notes so you can compare how a genetic performs across grows."}}</h3>
-    <label class="f"><span>Remarks</span>
-      <textarea name="remarks" placeholder="{{if eq $c.Kind "grow"}}How this genetic performed: speed, pin set, size, resilience{{else}}Growth rate, sector behaviour, anything about this genetic{{end}}">{{$c.Remarks}}</textarea>
-</label>
-  </div>
+  <section>
+    <div class="twocol">
+      <div><h4>Genetic remarks {{help "Kept apart from notes so you can compare how a genetic performs across grows."}}</h4>
+        <textarea name="remarks" aria-label="Genetic remarks" placeholder="{{if eq $c.Kind "grow"}}How this genetic performed: speed, pin set, size, resilience{{else}}Growth rate, sector behaviour, anything about this genetic{{end}}">{{$c.Remarks}}</textarea></div>
+      <div><h4>Notes</h4>
+        <textarea name="notes" aria-label="Notes" placeholder="What you did, what happened">{{$c.Notes}}</textarea></div>
+    </div>
+  </section>
 
-  <div class="panel">
-    <h3>Notes</h3>
-    <label class="f"><span>Notes</span><textarea name="notes" placeholder="What you did, what happened">{{$c.Notes}}</textarea></label>
-    <div class="btnrow">
+  <section>
+    <div class="actionrow">
       <button class="btn">Save changes</button>
       <a class="btn ghost" href="/component/{{$c.ID}}">Cancel</a>
+      <span class="spacer"></span>
+      <button class="btn warn" formaction="/component/{{$c.ID}}/delete" formnovalidate
+        onclick="return confirm('Delete {{$c.ID}} for good? Marking it gone is usually what you want — that keeps the family tree intact.')">Delete</button>
     </div>
-  </div>
+    <p class="hint">Delete is only for mistakes. To record that you no longer have it, mark it gone.</p>
+  </section>
+</div>
 </form>
 
-<div class="panel">
-  <h3>Careful</h3>
-  <form method="post" action="/component/{{$c.ID}}/delete"
-        onsubmit="return confirm('Delete {{$c.ID}} for good? Marking it gone is usually what you want — that keeps the family tree intact.')">
-    <button class="btn warn sm">Delete this entry</button>
-  </form>
-  <p class="hint">Only for mistakes. To record that you no longer have it, mark it gone.</p>
-</div>
 <script>
 var pairs = {{strainMap}};
 var st = document.getElementById("strain"), sp = document.getElementById("species");

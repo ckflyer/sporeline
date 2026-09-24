@@ -199,8 +199,8 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 	// generation rules
 	for r := 0; r <= maxRow; r++ {
 		top := padY + r*(nodeH+gapY)
-		fmt.Fprintf(&b, `<line x1="0" y1="%d" x2="%d" y2="%d" stroke="#DDE2D2" stroke-dasharray="2 6"/>`, top-11, width, top-11)
-		fmt.Fprintf(&b, `<text x="2" y="%d" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="9" fill="#8A9486">G%d</text>`,
+		fmt.Fprintf(&b, `<line x1="0" y1="%d" x2="%d" y2="%d" stroke="#7C6553" stroke-dasharray="2 6"/>`, top-11, width, top-11)
+		fmt.Fprintf(&b, `<text x="2" y="%d" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="9" fill="#CDBBA3">G%d</text>`,
 			top-15, minGen+r)
 	}
 	// edges
@@ -213,7 +213,7 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 			}
 			x1, y1 := pp.x+nodeW/2, pp.y+nodeH
 			x2, y2 := cp.x+nodeW/2, cp.y
-			fmt.Fprintf(&b, `<path d="M%d %d C %d %d, %d %d, %d %d" fill="none" stroke="#AEB9A2" stroke-width="1.4"/>`,
+			fmt.Fprintf(&b, `<path d="M%d %d C %d %d, %d %d, %d %d" fill="none" stroke="#D9C7AB" stroke-width="1.6"/>`,
 				x1, y1, x1, y1+26, x2, y2-26, x2, y2)
 		}
 	}
@@ -223,7 +223,7 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 		k := KindOf(c.Kind)
 		stroke, sw := "#C7CEB8", "1"
 		if c.ID == currentID {
-			stroke, sw = "#1F4D3A", "2"
+			stroke, sw = "#E9C46A", "3" // a warm ring that reads on the brown
 		}
 		op := "1"
 		if c.Gone {

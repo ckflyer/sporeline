@@ -597,13 +597,15 @@ func ImportLegacy(path string) (importReport, error) {
 		}
 	}
 	rep.Pictures = copyLegacyPics(folder, byOld)
+	batch := make([]*Component, 0, len(staged))
 	for _, s := range staged {
-		if err := store.AddImported(s.c); err != nil {
-			return rep, err
-		}
-		rep.Cultures++
+		batch = append(batch, s.c)
 	}
-	return rep, store.Save()
+	if err := store.AddImported(batch); err != nil {
+		return rep, err
+	}
+	rep.Cultures = len(batch)
+	return rep, nil
 }
 
 func parentsOf(list []legacyComp, old int64) []int64 {

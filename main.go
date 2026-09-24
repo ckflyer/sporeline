@@ -4,6 +4,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -21,7 +23,7 @@ var assets embed.FS
 //go:embed tmpl
 var tmplFS embed.FS
 
-const version = "1.0"
+const version = "1.5"
 
 var store *Store
 
@@ -62,16 +64,34 @@ func openBrowser(url string) {
 	_ = cmd.Start()
 }
 
-// listen takes the first free port from the preferred one upward, so a
-// second copy of Sporeline (or mycolog on 8080) never blocks you.
-func listen(pref int) (net.Listener, int, error) {
+// listen takes the first free port from the preferred one upward. If a
+// busy port turns out to be another copy of Sporeline, we say so rather
+// than starting a second one quietly against the same files — a second
+// window pointing at the same data is how you end up looking at a stale
+// page and wondering why nothing changed.
+func listen(pref int) (net.Listener, int, bool, error) {
 	for p := pref; p < pref+20; p++ {
 		l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
 		if err == nil {
-			return l, p, nil
+			return l, p, false, nil
+		}
+		if alreadyRunning(p) {
+			return nil, p, true, nil
 		}
 	}
-	return nil, 0, fmt.Errorf("no free port between %d and %d", pref, pref+20)
+	return nil, 0, false, fmt.Errorf("no free port between %d and %d", pref, pref+20)
+}
+
+// alreadyRunning asks whoever holds the port whether they are Sporeline.
+func alreadyRunning(port int) bool {
+	client := http.Client{Timeout: 700 * time.Millisecond}
+	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/alive", port))
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64))
+	return strings.HasPrefix(string(body), "sporeline")
 }
 
 func main() {
@@ -110,6 +130,9 @@ func main() {
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.Write(b)
 	})
+	mux.HandleFunc("GET /alive", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "sporeline %s", version)
+	})
 	mux.HandleFunc("GET /{$}", handleHome)
 	mux.HandleFunc("GET /list/{kind}", handleList)
 	mux.HandleFunc("GET /component/{id}", handleComponent)
@@ -142,12 +165,22 @@ func main() {
 	mux.HandleFunc("GET /guide", handleGuide)
 
 	store.BackupDaily()
+	store.CleanRemovedPics()
 
-	l, actual, err := listen(*port)
+	l, actual, running, err := listen(*port)
 	if err != nil {
 		fatal("%v", err)
 	}
 	url := fmt.Sprintf("http://localhost:%d/", actual)
+	if running {
+		fmt.Printf("\n  Sporeline is already running.\n")
+		fmt.Printf("  Opening the copy at %s\n", url)
+		fmt.Printf("  Close its window first if you meant to restart it.\n\n")
+		if !*headless {
+			openBrowser(url)
+		}
+		return
+	}
 	fmt.Printf("\n  Sporeline %s\n", version)
 	fmt.Printf("  Your log lives in: %s\n", store.Dir())
 	fmt.Printf("  Open %s in your browser.\n", url)
@@ -155,7 +188,7 @@ func main() {
 	if !*headless {
 		go func() { time.Sleep(300 * time.Millisecond); openBrowser(url) }()
 	}
-	log.Fatal(http.Serve(l, mux))
+	log.Fatal(http.Serve(l, guard(mux)))
 }
 
 func fatal(format string, args ...any) {

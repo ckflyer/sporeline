@@ -402,20 +402,29 @@ func (s *Store) Add(c *Component) error {
 	return err
 }
 
-// AddImported keeps an entry exactly as it arrived: its own ID, its own
-// generation. Nothing is renamed on the way in.
-func (s *Store) AddImported(c *Component) error {
-	if c.ID == "" {
-		return fmt.Errorf("imported entry has no ID")
-	}
-	if c.Added == 0 {
-		c.Added = time.Now().UnixNano()
+// AddImported keeps entries exactly as they arrived: their own IDs, their
+// own generations. Nothing is renamed on the way in. They go in all
+// together with a single save, so an import either lands whole or not
+// at all, and a big log does not rewrite the file once per culture.
+func (s *Store) AddImported(list []*Component) error {
+	now := time.Now().UnixNano()
+	for i, c := range list {
+		if c.ID == "" {
+			return fmt.Errorf("imported entry has no ID")
+		}
+		if c.Added == 0 {
+			c.Added = now + int64(i)
+		}
 	}
 	s.mu.Lock()
-	s.data.Components = append(s.data.Components, c)
-	err := s.flush()
-	s.mu.Unlock()
-	return err
+	defer s.mu.Unlock()
+	before := len(s.data.Components)
+	s.data.Components = append(s.data.Components, list...)
+	if err := s.flush(); err != nil {
+		s.data.Components = s.data.Components[:before]
+		return err
+	}
+	return nil
 }
 
 func (s *Store) Settings() Settings {
@@ -447,7 +456,7 @@ func (s *Store) Delete(id string) error {
 	for _, c := range s.data.Components {
 		if c.ID == id {
 			for _, p := range c.Pics {
-				os.Remove(filepath.Join(s.PicsDir(), p))
+				s.retirePic(p)
 			}
 			continue
 		}

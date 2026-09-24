@@ -1,99 +1,109 @@
 {{define "component.html"}}{{template "head" .}}
 {{$d := .Data}}{{$c := $d.C}}
 <p class="back"><a href="{{$d.Back.URL}}">← {{$d.Back.Label}}</a></p>
+
 <div class="pagehead">
   <div>
-    <h1 class="idbig">{{$c.ID}}</h1>
-    <p class="meta">
-      <span class="tag"><i style="background:{{$d.Kind.Color}}"></i>{{$d.Kind.Name}}</span>
-      {{if $c.Sub}}<span class="sep">·</span>{{$c.Sub}}{{end}}
-      {{if $c.Strain}}<span class="sep">·</span>{{$c.Strain}}{{end}}
-      {{if $c.Species}}<span class="sep">·</span>{{$c.Species}}{{end}}
-      {{if $c.Created}}<span class="sep">·</span>{{date $c.Created}}<span class="sep">·</span>{{since $c.Created}} old{{end}}
-      {{if $c.Gone}}<span class="sep">·</span><span class="badge gone">Gone</span>{{if ne $c.GoneReason "unknown"}} <span class="label">{{goneLabel $c.GoneReason}}</span>{{end}}{{end}}
-    </p>
+    <h1 class="idbig"><i class="kinddot" style="background:{{$d.Kind.Color}}"></i>{{$c.ID}}</h1>
+    <p class="sub" style="margin:4px 0 0">{{$c.Title}}{{with $c.Subtitle}} · {{.}}{{end}}{{if $c.Sub}} · {{$c.Sub}}{{end}}</p>
   </div>
-  <div class="btnrow"><a class="btn ghost" href="/component/{{$c.ID}}/edit">Edit</a></div>
-</div>
-
-<div class="panel">
-  <h3>Make something from this</h3>
-  <div class="btnrow">
-    {{range kinds}}<a class="btn {{if ne .Key $d.NextKind.Key}}ghost{{end}}" href="/add?kind={{.Key}}&parent={{$c.ID}}">New {{.Name}}</a>{{end}}
+  <div class="headactions">
+    <p class="makefrom">Add:{{range kinds}}<a href="/add?kind={{.Key}}&parent={{$c.ID}}">{{.Name}}</a>{{end}}</p>
+    <a class="btn ghost" href="/component/{{$c.ID}}/edit">Edit</a>
   </div>
 </div>
 
-<div class="panel">
-  <h3>Family {{help "Close family is this one, its siblings and everything made from them. The whole tree adds every ancestor and their other branches."}}
-    <span>{{if $d.FullGraph}}<a href="/component/{{$c.ID}}">close family</a>
-      {{else}}<a href="/component/{{$c.ID}}?full=1">whole tree</a>{{end}}</span>
-  </h3>
-  {{if $d.Family}}
+<div class="sheet">
+  <section class="treesec">
     <div class="treewrap">{{svg $d.Family}}</div>
-    <p class="hint">{{$d.FamilySize}} in view.</p>
-  {{else}}<p class="hint">Nothing related yet.</p>{{end}}
-</div>
+    <p class="treefoot">
+      <span class="tipleft">{{$d.FamilySize}} in view {{help "Close family is this one, its siblings and everything made from them. The whole tree adds every ancestor and their other branches."}}</span>
+      <span class="sep">·</span>
+      {{if $d.FullGraph}}<a href="/component/{{$c.ID}}">close family</a>{{else}}<a href="/component/{{$c.ID}}?full=1">whole tree</a>{{end}}
+    </p>
+  </section>
 
-{{if or $c.Notes $c.Remarks $c.Yield $c.Flushes}}
-<div class="panel">
-  <h3>Details</h3>
-  <dl class="kv">
-    {{if $c.Yield}}<dt>Yield</dt><dd style="font-family:var(--mono)">{{grams $c.Yield}}</dd>{{end}}
-    {{if $c.Flushes}}<dt>Flushes</dt><dd>{{$c.Flushes}}</dd>{{end}}
-    {{if $c.Remarks}}<dt>Genetics</dt><dd class="pre">{{$c.Remarks}}</dd>{{end}}
-    {{if $c.Notes}}<dt>Notes</dt><dd class="pre">{{$c.Notes}}</dd>{{end}}
-  </dl>
-</div>
-{{end}}
+  <section>
+    <h4>Details</h4>
+    <div class="fields">
+      <div class="field"><span>Kind</span><b><i class="dotsm" style="background:{{$d.Kind.Color}}"></i>{{$d.Kind.Name}}{{if $c.Sub}}<span class="quiet">· {{$c.Sub}}</span>{{end}}</b></div>
+      {{if $c.Strain}}<div class="field"><span>Strain</span><b>{{$c.Strain}}</b></div>{{end}}
+      {{if $c.Species}}<div class="field"><span>Species</span><b>{{$c.Species}}</b></div>{{end}}
+      <div class="field"><span>Started</span><b>{{date $c.Created}}</b><em>{{age $c.Created}}</em></div>
+      <div class="field"><span>Status</span>
+        {{if $c.Gone}}<b><span class="badge gone">Gone</span>{{if ne $c.GoneReason "unknown"}} <span class="label">{{goneLabel $c.GoneReason}}</span>{{end}}</b>
+          {{if or $c.GoneAt $c.GoneNote}}<em>{{if $c.GoneAt}}{{date $c.GoneAt}}{{end}}{{if $c.GoneNote}}{{if $c.GoneAt}} · {{end}}{{$c.GoneNote}}{{end}}</em>{{end}}
+        {{else}}<b>On hand</b>{{end}}</div>
+    </div>
+  </section>
 
-<div class="panel">
-  <h3>Parents</h3>
-  {{if $d.Parents}}<div class="pills">{{range $d.Parents}}<a class="pill" href="/component/{{.ID}}">{{.ID}}</a>{{end}}</div>
-  {{else}}<p class="hint" style="margin:0">None.</p>{{end}}
-</div>
-<div class="panel">
-  <h3>Children</h3>
-  {{if $d.Children}}<div class="pills">{{range $d.Children}}<a class="pill" href="/component/{{.ID}}">{{.ID}}</a>{{end}}</div>
-  {{else}}<p class="hint" style="margin:0">Nothing yet.</p>{{end}}
-</div>
+  <section>
+    <h4>Lineage</h4>
+    <div class="twocol">
+      <div>
+        <span class="minilabel">Parents</span>
+        {{if $d.Parents}}<div class="pills">{{range $d.Parents}}<a class="pill" href="/component/{{.ID}}">{{.ID}} <span class="who">{{.Title}}</span></a>{{end}}</div>
+        {{else}}<p class="hint" style="margin:0">None. This is where its line starts.</p>{{end}}
+      </div>
+      <div>
+        <span class="minilabel">Children</span>
+        {{if $d.Children}}<div class="pills">{{range $d.Children}}<a class="pill" href="/component/{{.ID}}">{{.ID}} <span class="who">{{(kindOf .Kind).Name}}</span></a>{{end}}</div>
+        {{else}}<p class="hint" style="margin:0">Nothing made from it yet.</p>{{end}}
+      </div>
+    </div>
+  </section>
 
-<div class="panel">
-  <h3>Pictures</h3>
-  {{if $c.Pics}}<div class="shots" style="margin-bottom:12px">
-    {{range $c.Pics}}<div class="shot">
-      <a href="/pics/{{.}}" target="_blank"><img src="/pics/{{.}}" alt="" loading="lazy"></a>
-      <form method="post" action="/component/{{$c.ID}}/pics/delete">
-        <input type="hidden" name="name" value="{{.}}"><button title="Remove">&times;</button></form>
-    </div>{{end}}
-  </div>{{end}}
-  <form method="post" action="/component/{{$c.ID}}/pics" enctype="multipart/form-data">
-    <input type="file" name="pic" accept="image/jpeg,image/png" multiple style="margin-bottom:8px;max-width:420px">
-    <button class="btn ghost sm">Add pictures</button>
-  </form>
-</div>
+  {{if eq $c.Kind "grow"}}
+  <section>
+    <h4>Harvest</h4>
+    <div class="fields pair">
+      <div class="field"><span>Total yield</span><b class="mono">{{if $c.Yield}}{{grams $c.Yield}}{{else}}—{{end}}</b></div>
+      <div class="field"><span>Flushes</span><b>{{if $c.Flushes}}{{$c.Flushes}}{{else}}—{{end}}</b></div>
+    </div>
+  </section>
+  {{end}}
 
-<div class="panel">
-  <h3>{{if $c.Gone}}No longer here{{else}}Still on hand?{{end}}</h3>
-  {{if $c.Gone}}
-    <dl class="kv" style="margin-bottom:12px">
-      <dt>What happened</dt><dd>{{goneLabel $c.GoneReason}}</dd>
-      {{if $c.GoneAt}}<dt>When</dt><dd>{{date $c.GoneAt}}</dd>{{end}}
-      {{if $c.GoneNote}}<dt>Notes</dt><dd>{{$c.GoneNote}}</dd>{{end}}
-    </dl>
-    <form method="post" action="/component/{{$c.ID}}/gone">
-      <input type="hidden" name="back" value="1">
-      <button class="btn ghost sm">Back on hand</button></form>
-  {{else}}
-    <form method="post" action="/component/{{$c.ID}}/gone">
-      <div class="grid2">
+  {{if or $c.Remarks $c.Notes}}
+  <section>
+    <div class="twocol">
+      {{if $c.Remarks}}<div><h4>Genetic remarks</h4><div class="pre">{{$c.Remarks}}</div></div>{{end}}
+      {{if $c.Notes}}<div><h4>Notes</h4><div class="pre">{{$c.Notes}}</div></div>{{end}}
+    </div>
+  </section>
+  {{end}}
+
+  <section>
+    {{if $c.Gone}}
+      <h4>No longer here</h4>
+      <form method="post" action="/component/{{$c.ID}}/gone">
+        <input type="hidden" name="back" value="1">
+        <button class="btn ghost sm">Back on hand</button></form>
+    {{else}}
+      <h4>Mark as gone</h4>
+      <form method="post" action="/component/{{$c.ID}}/gone" class="gonerow">
         <label class="f"><span>What happened</span>
           <select name="reason">{{range goneReasons}}<option value="{{.Key}}">{{.Label}}</option>{{end}}</select></label>
         <label class="f"><span>When</span><input type="date" name="goneAt" value="{{today}}"></label>
-      </div>
-      <label class="f"><span>Notes (optional)</span>
-        <input type="text" name="goneNote" placeholder="Trich on day 4, came in from the tub"></label>
-      <button class="btn warn sm">Mark as gone</button>
+        <label class="f gonenote"><span>Notes</span>
+          <input type="text" name="goneNote" placeholder="Optional"></label>
+        <button class="btn warn">Mark as gone</button>
+      </form>
+    {{end}}
+  </section>
+
+  <section class="pics">
+    <h4>Pictures</h4>
+    {{if $c.Pics}}<div class="shots" style="margin-bottom:12px">
+      {{range $c.Pics}}<div class="shot">
+        <a href="/pics/{{.}}" target="_blank"><img src="/pics/{{.}}" alt="" loading="lazy"></a>
+        <form method="post" action="/component/{{$c.ID}}/pics/delete">
+          <input type="hidden" name="name" value="{{.}}"><button title="Remove">&times;</button></form>
+      </div>{{end}}
+    </div>{{end}}
+    <form method="post" action="/component/{{$c.ID}}/pics" enctype="multipart/form-data">
+      <input type="file" name="pic" accept="image/jpeg,image/png" multiple style="margin-bottom:8px;max-width:420px">
+      <button class="btn ghost sm">Add pictures</button>
     </form>
-  {{end}}
+  </section>
 </div>
 {{template "foot" .}}{{end}}

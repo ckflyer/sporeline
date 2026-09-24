@@ -21,7 +21,7 @@
 </label>
     </div>
     <div class="grid2">
-      <label class="f"><span>Type (optional)</span>
+      <label class="f"><span>Form {{help "What it is kept in or on: an agar plate, a liquid culture, rye grain, a monotub. Optional."}}</span>
         <input type="text" name="sub" list="sub-list" autocomplete="off" placeholder="{{if $d.Subs}}{{index $d.Subs 0}}{{end}}">
         <datalist id="sub-list">{{range $d.Subs}}<option value="{{.}}">{{end}}</datalist></label>
       <label class="f"><span>Started</span><input type="date" name="created" value="{{$d.Today}}"></label>
@@ -30,26 +30,19 @@
 
   <div class="panel">
     <h3>Where it came from</h3>
-    <label class="f"><span>Parents {{help "One row per parent. A tub spawned from two jars has two."}}</span>
-      <div id="parents">
-        {{if $d.Parents}}{{range $d.Parents}}
-        <div class="rowline"><input type="text" name="parent" value="{{.ID}}" list="id-list" autocomplete="off" placeholder="Type an ID"></div>
-        {{end}}{{else}}
-        <div class="rowline"><input type="text" name="parent" list="id-list" autocomplete="off" placeholder="Type an ID, or leave empty"></div>
-        {{end}}
+    <div class="origin">
+      <div>
+        <div class="f"><span>Parents {{help "What this was made from. A tub spawned from two jars has two."}}</span>
+          <div id="parentchips" class="pills"></div>
+          <button type="button" class="btn ghost sm" id="pickparent">Choose a parent</button>
+        </div>
+        <label class="f" style="max-width:220px"><span>How many</span>
+          <input type="number" id="count" name="count" value="1" min="1" max="40"></label>
       </div>
-      <datalist id="id-list">{{range $d.Others}}<option value="{{.ID}}">{{.Title}}{{if .Sub}} · {{.Sub}}{{end}}</option>{{end}}</datalist>
-      <button type="button" class="plus" id="addparent" title="Add another parent">+</button>
-    </label>
-    <label class="f" style="max-width:220px"><span>How many</span>
-      <input type="number" id="count" name="count" value="1" min="1" max="40">
-</label>
-  </div>
-
-  <div class="panel">
-    <h3>Labels <button type="button" id="reroll">new ones</button></h3>
-    <p class="hint" style="margin:0 0 10px">Write these on the jars.</p>
-    <div id="idpreview" class="idpreview"></div>
+      <div class="f idside"><span>IDs {{help "Write these on the jars as you go. They are saved exactly as shown, and change if you change the parents."}}</span>
+        <div id="idpreview" class="idtable"></div>
+      </div>
+    </div>
   </div>
 
   <div class="panel">
@@ -61,36 +54,146 @@
     </div>
   </div>
 </form>
+<div class="pickscrim" id="pickscrim" hidden></div>
+<div class="picker" id="picker" hidden role="dialog" aria-label="Choose a parent">
+  <header>
+    <input type="text" id="picksearch" placeholder="Search by ID, strain, species or form" autocomplete="off">
+    <button type="button" class="btn ghost sm" id="pickclose">Close</button>
+  </header>
+  <div id="picklist" class="picklist"></div>
+</div>
+
 <script>
-document.getElementById("addparent").addEventListener("click", function(){
-  var box = document.getElementById("parents");
-  var row = box.firstElementChild.cloneNode(true);
-  row.querySelector("input").value = "";
-  box.appendChild(row);
-  row.querySelector("input").focus();
-});
+var CANDIDATES = [
+{{range $d.Others}}  {id:"{{.ID}}", kind:"{{(kindOf .Kind).Name}}", color:"{{(kindOf .Kind).Color}}", title:"{{.Title}}", sub:"{{.Sub}}", date:"{{date .Created}}", gen:{{.Gen}}, gone:{{if .Gone}}true{{else}}false{{end}}},
+{{end}}];
+var chosen = [];
+{{range $d.Parents}}chosen.push("{{.ID}}");
+{{end}}
+var chips = document.getElementById("parentchips"),
+    picker = document.getElementById("picker"),
+    pickscrim = document.getElementById("pickscrim"),
+    picklist = document.getElementById("picklist"),
+    picksearch = document.getElementById("picksearch");
+
+// el builds an element with plain text inside. Names are never treated
+// as HTML, so a strain called "<b>" shows up as exactly that.
+function el(tag, cls, text){
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function find(id){ return CANDIDATES.filter(function(x){ return x.id === id; })[0]; }
+
+function drawChips(){
+  chips.textContent = "";
+  chosen.forEach(function(id){
+    var c = find(id);
+    var pill = el("span", "pill chosen", id + " ");
+    if (c) pill.appendChild(el("span", "who", c.title));
+    var x = el("button", null, "\u00d7");
+    x.type = "button";
+    x.setAttribute("aria-label", "Remove " + id);
+    x.addEventListener("click", function(){
+      chosen = chosen.filter(function(v){ return v !== id; });
+      drawChips();
+    });
+    pill.appendChild(document.createTextNode(" "));
+    pill.appendChild(x);
+    var hid = document.createElement("input");
+    hid.type = "hidden"; hid.name = "parent"; hid.value = id;
+    pill.appendChild(hid);
+    chips.appendChild(pill);
+  });
+  if (!chosen.length) {
+    var h = el("span", "hint", "Nothing selected, so this starts its own line.");
+    h.style.margin = "0";
+    chips.appendChild(h);
+  }
+  refreshIDs();
+}
+function drawList(){
+  var q = picksearch.value.trim().toLowerCase();
+  picklist.textContent = "";
+  var shown = 0;
+  CANDIDATES.forEach(function(c){
+    if (chosen.indexOf(c.id) >= 0) return;
+    var hay = (c.id + " " + c.title + " " + c.sub + " " + c.kind).toLowerCase();
+    if (q && hay.indexOf(q) < 0) return;
+    shown++;
+    var row = el("button", "pickrow" + (c.gone ? " gone" : ""));
+    row.type = "button";
+    var dot = el("i"); dot.style.background = c.color;
+    row.appendChild(dot);
+    row.appendChild(el("b", null, c.id));
+    row.appendChild(el("span", null, c.title + (c.sub ? " \u00b7 " + c.sub : "")));
+    row.appendChild(el("em", null, c.kind + " \u00b7 " + c.date + (c.gone ? " \u00b7 gone" : "")));
+    row.addEventListener("click", function(){
+      chosen.push(c.id);
+      drawChips(); closePicker();
+    });
+    picklist.appendChild(row);
+  });
+  if (!shown) {
+    var p = el("p", "hint", "Nothing matches.");
+    p.style.padding = "14px";
+    picklist.appendChild(p);
+  }
+}
+function openPicker(){
+  picker.hidden = false; pickscrim.hidden = false;
+  picksearch.value = ""; drawList(); picksearch.focus();
+}
+function closePicker(){
+  picker.hidden = true; pickscrim.hidden = true;
+}
+document.getElementById("pickparent").addEventListener("click", openPicker);
+document.getElementById("pickclose").addEventListener("click", closePicker);
+pickscrim.addEventListener("click", closePicker);
+picksearch.addEventListener("input", drawList);
+document.addEventListener("keydown", function(e){ if (e.key === "Escape") closePicker(); });
+
+// ---- ID preview ----
+// The generation digit depends on the parents, so the preview is redrawn
+// whenever a parent is added or removed. The server checks it the same
+// way and will not accept an ID whose generation does not match.
 var pairs = {{strainMap}};
-var PREFIX = "{{$d.Prefix}}", ALPHABET = "{{$d.Alphabet}}";
+var KINDPREFIX = "{{$d.Kind.Prefix}}", ALPHABET = "{{$d.Alphabet}}";
 var TAKEN = {};
 {{range $d.TakenIDs}}TAKEN["{{.}}"] = true;
 {{end}}
 var preview = document.getElementById("idpreview"), count = document.getElementById("count");
+var prefix = "";
+function genChar(g){
+  if (g < 0) g = 0;
+  if (g <= 9) return String(g);
+  var i = g - 10;
+  return i > 25 ? "Z" : String.fromCharCode(65 + i);
+}
+function currentPrefix(){
+  var best = -1;
+  chosen.forEach(function(id){ var c = find(id); if (c && c.gen > best) best = c.gen; });
+  return KINDPREFIX + genChar(best + 1);
+}
 function mint(){
   for (var i = 0; i < 500; i++) {
-    var id = PREFIX;
+    var id = prefix;
     for (var j = 0; j < 3; j++) id += ALPHABET.charAt(Math.floor(Math.random() * ALPHABET.length));
     if (!TAKEN[id]) { TAKEN[id] = true; return id; }
   }
-  return PREFIX + "???";
+  return prefix + "???";
 }
 function draw(){
   var want = Math.max(1, Math.min(40, parseInt(count.value, 10) || 1));
-  var have = preview.children.length;
-  for (var i = have; i < want; i++) {
-    var box = document.createElement("div");
-    box.className = "idcard";
+  for (var i = preview.children.length; i < want; i++) {
     var id = mint();
-    box.innerHTML = '<span>' + id + '</span><input type="hidden" name="id" value="' + id + '">';
+    var box = el("div", "idrow");
+    box.appendChild(el("span", "n", String(i + 1)));
+    box.appendChild(el("span", "code", id));
+    var hid = document.createElement("input");
+    hid.type = "hidden"; hid.name = "id"; hid.value = id;
+    box.appendChild(hid);
     preview.appendChild(box);
   }
   while (preview.children.length > want) {
@@ -99,13 +202,17 @@ function draw(){
     preview.removeChild(last);
   }
 }
-count.addEventListener("input", draw);
-document.getElementById("reroll").addEventListener("click", function(){
-  Array.prototype.forEach.call(preview.querySelectorAll("input"), function(i){ delete TAKEN[i.value]; });
-  preview.innerHTML = "";
+function refreshIDs(){
+  var p = currentPrefix();
+  if (p === prefix) return;
+  prefix = p;
+  // New generation: hand back the old IDs and mint fresh ones.
+  Array.prototype.forEach.call(preview.querySelectorAll("input"), function(inp){ delete TAKEN[inp.value]; });
+  preview.textContent = "";
   draw();
-});
-draw();
+}
+count.addEventListener("input", draw);
+drawChips();
 var st = document.getElementById("strain"), sp = document.getElementById("species");
 st.addEventListener("change", function(){
   var hit = pairs[st.value.trim()];

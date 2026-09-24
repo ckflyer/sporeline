@@ -69,6 +69,7 @@ func (s *Store) PruneBackups() {
 	for i := keep; i < len(list); i++ {
 		os.Remove(filepath.Join(s.BackupsDir(), list[i].Name))
 	}
+	s.CleanRemovedPics()
 }
 
 // BackupDaily takes one backup per day, on startup. Enough to undo a
@@ -101,6 +102,9 @@ func (s *Store) RestoreBackup(name string) error {
 	if d.Components == nil {
 		return fmt.Errorf("that backup holds no cultures")
 	}
+	// Pictures first: taking the before-restore backup can prune the very
+	// backup being restored, and with it the last mention of its pictures.
+	s.bringBackPics(d)
 	s.BackupNow("before-restore")
 	settings := s.Settings()
 	d.Settings = settings // keep current preferences, not the old ones

@@ -31,21 +31,27 @@ func loadTemplates() error {
 			}
 			return t.Format("2 Jan 2006")
 		},
-		"since": func(s string) string {
+		// A complete phrase, so nothing has to bolt " old" onto the end
+		// and produce "today old".
+		"age": func(s string) string {
 			t, err := time.Parse("2006-01-02", s)
 			if err != nil {
 				return ""
 			}
 			d := int(time.Since(t).Hours() / 24)
 			switch {
+			case d < 0:
+				return "starts in the future"
 			case d < 1:
-				return "today"
+				return "started today"
 			case d == 1:
-				return "1 day"
+				return "1 day old"
 			case d < 60:
-				return fmt.Sprintf("%d days", d)
+				return fmt.Sprintf("%d days old", d)
+			case d < 730:
+				return fmt.Sprintf("%d months old", d/30)
 			default:
-				return fmt.Sprintf("%d months", d/30)
+				return fmt.Sprintf("%d years old", d/365)
 			}
 		},
 		"grams": func(f float64) string {
@@ -58,6 +64,7 @@ func loadTemplates() error {
 		"parents":     func(id string) []*Component { return store.Parents(id) },
 		"svg":         func(s string) template.HTML { return template.HTML(s) },
 		"today":       func() string { return time.Now().Format("2006-01-02") },
+		"version":     func() string { return version },
 		"goneReasons": func() []GoneReason { return GoneReasons },
 		// help renders a small ? that explains something genuinely
 		// unobvious. Used sparingly; most of the interface should not
@@ -136,6 +143,8 @@ type listData struct {
 	Pool       int
 	Filtered   bool
 	Added      []string
+	Elsewhere  int
+	ExactHit   *Component
 	Back       backLink
 }
 
@@ -143,31 +152,66 @@ func handleList(w http.ResponseWriter, r *http.Request) {
 	kind := r.PathValue("kind")
 	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
 	show := r.URL.Query().Get("show")
+	// The status filter sticks between visits: it is the one people set
+	// once and want to stay set.
+	if r.URL.Query().Has("f") {
+		http.SetCookie(w, &http.Cookie{Name: "show", Value: show, Path: "/", MaxAge: 60 * 60 * 24 * 365})
+	} else if c, err := r.Cookie("show"); err == nil {
+		show = c.Value
+	}
 	species := r.URL.Query().Get("species")
 	strain := r.URL.Query().Get("strain")
 
-	var items []*Component
-	for _, c := range store.OfKind(kind) {
+	match := func(c *Component) bool {
 		if show == "here" && c.Gone {
-			continue
+			return false
 		}
 		if show == "gone" && !c.Gone {
-			continue
+			return false
 		}
 		if species != "" && c.Species != species {
-			continue
+			return false
 		}
 		if strain != "" && c.Strain != strain {
-			continue
+			return false
 		}
 		if q != "" {
-			hay := strings.ToLower(strings.Join([]string{c.ID, c.Strain, c.Species, c.Sub, c.Notes, c.Remarks, c.GoneNote}, " "))
+			hay := strings.ToLower(strings.Join([]string{c.ID, c.Strain, c.Species, c.Sub,
+				c.Notes, c.Remarks, c.GoneNote, c.Flushes}, " "))
 			if !strings.Contains(hay, q) {
-				continue
+				return false
 			}
 		}
-		items = append(items, c)
+		return true
 	}
+
+	var items []*Component
+	inList := map[string]bool{}
+	for _, c := range store.OfKind(kind) {
+		if match(c) {
+			items = append(items, c)
+			inList[c.ID] = true
+		}
+	}
+
+	// Anything that matches but sits under a different tab, so a search
+	// on one list never looks like the thing does not exist.
+	elsewhere := 0
+	var exact *Component
+	if q != "" {
+		for _, c := range store.All() {
+			if inList[c.ID] {
+				continue
+			}
+			if strings.EqualFold(c.ID, q) {
+				exact = c
+			}
+			if match(c) {
+				elsewhere++
+			}
+		}
+	}
+
 	counts := map[string]int{"all": 0}
 	for _, c := range store.All() {
 		counts[c.Kind]++
@@ -182,8 +226,9 @@ func handleList(w http.ResponseWriter, r *http.Request) {
 		Kind: k, KindKey: kind, Items: items, Q: q, Show: show, Species: species, Strain: strain,
 		AllSpecies: store.Seen("species"), AllStrains: store.Seen("strain"),
 		Counts: counts, Total: len(items), Pool: counts[kind],
-		Filtered: q != "" || species != "" || strain != "" || show != "",
-		Added:    splitIDs(r.URL.Query().Get("added")),
+		Filtered:  q != "" || species != "" || strain != "" || show != "",
+		Added:     splitIDs(r.URL.Query().Get("added")),
+		Elsewhere: elsewhere, ExactHit: exact,
 	}
 	// Typing in the search box asks for just the results, not the page.
 	if r.Header.Get("X-Partial") != "" {
@@ -484,6 +529,10 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 		count = n
 	}
 	wanted := r.Form["id"]
+	// The ID the page showed is only kept if it says the right kind and
+	// generation. Otherwise a fresh one is issued, so a label can never
+	// claim a generation the entry does not have.
+	wantPrefix := KindOf(kind).Prefix + string(genChar(store.GenerationOf(parents)))
 	taken := map[string]bool{}
 	for _, existing := range store.All() {
 		taken[existing.ID] = true
@@ -495,7 +544,7 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 		cc.ID = ""
 		if i < len(wanted) {
 			candidate := strings.ToUpper(strings.TrimSpace(wanted[i]))
-			if validID(candidate) && !taken[candidate] {
+			if validID(candidate) && strings.HasPrefix(candidate, wantPrefix) && !taken[candidate] {
 				cc.ID = candidate
 				taken[candidate] = true
 			}
@@ -561,7 +610,7 @@ func handleDeletePic(w http.ResponseWriter, r *http.Request) {
 		var keep []string
 		for _, p := range c.Pics {
 			if p == name {
-				os.Remove(filepath.Join(store.PicsDir(), filepath.Base(p)))
+				store.retirePic(p)
 				continue
 			}
 			keep = append(keep, p)
@@ -805,6 +854,7 @@ func importFromFile(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/data?notice="+urlEscape("That is not a Sporeline file."), http.StatusSeeOther)
 		return
 	}
+	store.bringBackPics(b.Data)
 	store.BackupNow("before-import")
 	written := writePictures(b.Pictures)
 	var notice string

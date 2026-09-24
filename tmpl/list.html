@@ -13,6 +13,12 @@
 
 <form method="get" class="searchbar" id="filterform" data-base="/list/{{$d.KindKey}}">
   <input type="text" name="q" id="q" placeholder="Search" value="{{$d.Q}}" autocomplete="off">
+  <div class="segmented" role="group" aria-label="Status">
+    <label{{if eq $d.Show ""}} class="on"{{end}}><input type="radio" name="show" value="" {{if eq $d.Show ""}}checked{{end}}>All</label>
+    <label{{if eq $d.Show "here"}} class="on"{{end}}><input type="radio" name="show" value="here" {{if eq $d.Show "here"}}checked{{end}}>On hand</label>
+    <label{{if eq $d.Show "gone"}} class="on"{{end}}><input type="radio" name="show" value="gone" {{if eq $d.Show "gone"}}checked{{end}}>Gone</label>
+  </div>
+  <input type="hidden" name="f" value="1">
   <button type="button" class="btn ghost" id="filterbtn" aria-expanded="{{if $d.Filtered}}true{{else}}false{{end}}">Filter</button>
 
   <div class="filterpanel" id="filterpanel" {{if not $d.Filtered}}hidden{{end}}>
@@ -25,12 +31,6 @@
       <label class="f"><span>Species</span>
         <select name="species"><option value="">Any</option>
           {{range $d.AllSpecies}}<option {{if eq . $d.Species}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-      <label class="f"><span>Status</span>
-        <select name="show">
-          <option value="" {{if eq $d.Show ""}}selected{{end}}>Any</option>
-          <option value="here" {{if eq $d.Show "here"}}selected{{end}}>On hand</option>
-          <option value="gone" {{if eq $d.Show "gone"}}selected{{end}}>Gone</option>
-        </select></label>
     </div>
   </div>
 </form>
@@ -52,7 +52,9 @@ fb.addEventListener("click", function(){
 
 function query(){
   var p = new URLSearchParams();
-  new FormData(form).forEach(function(v, k){ if (v) p.append(k, v); });
+  new FormData(form).forEach(function(v, k){ if (v || k === "show") p.append(k, v); });
+  if (!p.has("show")) p.append("show", "");
+  p.append("f", "1");
   return p.toString();
 }
 function refresh(){
@@ -65,6 +67,13 @@ function refresh(){
     });
 }
 form.addEventListener("input", function(e){
+  if (e.target.type === "radio") {
+    Array.prototype.forEach.call(form.querySelectorAll(".segmented label"), function(el){
+      el.classList.toggle("on", el.querySelector("input").checked);
+    });
+    refresh();
+    return;
+  }
   if (e.target.tagName === "SELECT") { refresh(); return; }
   clearTimeout(timer);
   timer = setTimeout(refresh, 180);
@@ -76,9 +85,14 @@ results.addEventListener("click", function(e){
   e.preventDefault();
   var next = new URL(clear.href, location.origin);
   var p = next.searchParams;
-  ["q","strain","species","show"].forEach(function(name){
+  ["q","strain","species"].forEach(function(name){
     var field = form.elements[name];
     if (field) field.value = p.get(name) || "";
+  });
+  var want = p.get("show") || "";
+  Array.prototype.forEach.call(form.querySelectorAll(".segmented input"), function(el){
+    el.checked = el.value === want;
+    el.parentNode.classList.toggle("on", el.checked);
   });
   refresh();
 });
@@ -100,12 +114,18 @@ results.addEventListener("click", function(e){
   {{if .Species}}<a class="chip" href="/list/{{$k}}?{{if .Q}}q={{.Q}}&{{end}}{{if .Strain}}strain={{.Strain}}&{{end}}{{if .Show}}show={{.Show}}{{end}}">{{.Species}} ×</a>{{end}}
   {{if .Show}}<a class="chip" href="/list/{{$k}}?{{if .Q}}q={{.Q}}&{{end}}{{if .Strain}}strain={{.Strain}}&{{end}}{{if .Species}}species={{.Species}}{{end}}">{{if eq .Show "gone"}}Gone{{else}}On hand{{end}} ×</a>{{end}}
   <a class="chip clear" href="/list/{{$k}}">Clear all</a>
+  {{if .Elsewhere}}<a class="chip" href="/list/all?q={{.Q}}">{{.Elsewhere}} more elsewhere</a>{{end}}
 </p>
+{{end}}
+
+{{if .ExactHit}}
+<p class="chips"><span class="label">That ID is a {{(kindOf .ExactHit.Kind).Name}} entry:</span>
+  <a class="chip" href="/component/{{.ExactHit.ID}}">{{.ExactHit.ID}} — {{.ExactHit.Title}}</a></p>
 {{end}}
 
 {{if .Items}}
 <table>
-  <thead><tr><th>ID</th><th>Name</th><th class="hide-s">Type</th><th class="hide-s">Started</th><th>Status</th></tr></thead>
+  <thead><tr><th>ID</th><th>Name</th><th class="hide-s">Kind</th><th class="hide-s">Started</th><th>Status</th></tr></thead>
   <tbody>
   {{range .Items}}{{$kind := kindOf .Kind}}
     <tr {{if .Gone}}class="gone"{{end}}>
@@ -120,7 +140,8 @@ results.addEventListener("click", function(e){
 </table>
 {{else}}
 <div class="empty">
-  <h2>{{if .Filtered}}Nothing matches{{else}}Nothing here yet{{end}}</h2>
+  <h2>{{if .Filtered}}Nothing matches{{if .Elsewhere}} here{{end}}{{else}}Nothing here yet{{end}}</h2>
+  {{if .Elsewhere}}<p><a class="btn" href="/list/all?q={{.Q}}{{if .Strain}}&strain={{.Strain}}{{end}}{{if .Species}}&species={{.Species}}{{end}}{{if .Show}}&show={{.Show}}{{end}}">{{.Elsewhere}} match under other kinds — search everything</a></p>{{end}}
   {{if .Filtered}}<p><a class="btn ghost" href="/list/{{.KindKey}}">Clear filters</a></p>
   {{else}}<p><a class="btn" href="/add?kind={{if eq .KindKey "all"}}spores{{else}}{{.KindKey}}{{end}}">Add {{if eq .KindKey "all"}}Spores{{else}}{{.Kind.Name}}{{end}}</a></p>{{end}}
 </div>

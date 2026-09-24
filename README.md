@@ -33,7 +33,9 @@ You do not need to know anything about command prompts or programming.
 
 Leave the black window open while you are using Sporeline. It is the program
 itself. Closing it shuts Sporeline down, and everything you entered is already
-saved. To start again later, double-click the file again.
+saved. To start again later, double-click the file again. If it is already
+running, double-clicking just brings you back to the copy that is open rather
+than starting a second one.
 
 If your browser does not open on its own, look at the black window. It prints
 an address like `http://localhost:8099`. Type that into your browser.
@@ -47,6 +49,8 @@ quarantines the file, you will need to allow it.
 C:\Users\<your name>\sporeline\
     sporeline.json    your log
     pics\             your pictures
+    removed-pics\     pictures from deleted entries, kept while a backup
+                      still mentions them, so a restore brings them back
     backups\          dated copies of your log
 ```
 
@@ -94,6 +98,16 @@ stay exactly as they were, so labels already on your jars still match. The
 mycolog folder is only read, never changed, and Sporeline backs up its own log
 before it starts.
 
+Deleting an entry or a picture moves the picture into `removed-pics` rather
+than erasing it. If you restore a backup from before the delete, the pictures
+come back with it. Once no backup mentions a picture any more (about a month
+with the default settings), it is erased for good.
+
+## Version
+
+The version is shown at the bottom of the sidebar, and printed in the black
+window when Sporeline starts.
+
 ## Options
 
 Sporeline takes a few switches if you want them. Most people never will.
@@ -113,6 +127,15 @@ driver, no C compiler, no build step for the front end.
 go build .
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o sporeline.exe .
 ```
+
+To run the checks:
+
+```
+go test ./...
+```
+
+They use a small sample mycolog database in `testdata/` and never touch your
+own log.
 
 The Windows icon comes from `rsrc_windows_amd64.syso`, which the Go toolchain
 picks up on its own. To rebuild it after changing `assets/sporeline.ico`:
