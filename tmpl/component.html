@@ -16,11 +16,18 @@
 <div class="sheet">
   <section class="treesec">
     <div class="treewrap">{{svg $d.Family}}</div>
-    <p class="treefoot">
-      <span class="tipleft">{{$d.FamilySize}} in view {{help "Close family is this one, its siblings and everything made from them. The whole tree adds every ancestor and their other branches."}}</span>
+    <div class="treefoot">
+      <p class="treekey">
+        {{range kinds}}<span><i style="background:{{.Color}}"></i>{{.Name}}</span>{{end}}
+        <span><i class="k-gone"></i>Gone</span>
+        <span><i class="k-this"></i>This one</span>
+        <span class="genkey">GEN = generation, the steps from where the line started. It is also the digit in each ID: {{$c.ID}} is generation {{$c.Gen}}.</span>
+      </p>
+      <p class="treecount"><span class="tipleft">{{$d.FamilySize}} in view {{help "Close family is this one, its siblings and everything made from them. The whole tree adds every ancestor and their other branches."}}</span>
       <span class="sep">·</span>
       {{if $d.FullGraph}}<a href="/component/{{$c.ID}}">close family</a>{{else}}<a href="/component/{{$c.ID}}?full=1">whole tree</a>{{end}}
-    </p>
+      </p>
+    </div>
   </section>
 
   <section>
@@ -60,7 +67,7 @@
       {{if or $c.TotalWet $c.TotalDry}}<p class="totals">Total
         {{if $c.TotalWet}}<b>{{weight $c.TotalWet}}</b> g wet{{end}}{{if and $c.TotalWet $c.TotalDry}} · {{end}}{{if $c.TotalDry}}<b>{{weight $c.TotalDry}}</b> g dry{{end}}</p>{{end}}
     </div>
-    {{if eq $d.MsgAt "harvest"}}<p class="flash">{{$d.Msg}}</p>{{end}}
+    {{if eq $d.MsgAt "harvest"}}<p class="flash warnmsg">{{$d.Msg}}</p>{{end}}
     <div class="flushes">
       <div class="flushrow head" aria-hidden="true"><span>Flush</span><span>Date</span><span>Wet (g)</span><span>Dry (g)</span><span></span></div>
       {{range $i, $f := $c.FlushLog}}
@@ -102,7 +109,6 @@
         <span class="acts"><button class="btn sm">Add flush</button></span>
       </form>
     </div>
-    <p class="hint" style="margin:8px 0 0">Fill in either weight or both. Weighed it wet at harvest? Add the flush now and type the dry weight into the same row once it has dried.</p>
   </section>
   {{end}}
 
@@ -158,6 +164,13 @@
   </section>
 </div>
 <script>
+// When the tree is wider than the screen, start with this culture in view.
+(function(){
+  var wrap = document.querySelector(".treewrap"), me = wrap && wrap.querySelector("a.this");
+  if (!wrap || !me || wrap.scrollWidth <= wrap.clientWidth) return;
+  var w = wrap.getBoundingClientRect(), m = me.getBoundingClientRect();
+  wrap.scrollLeft += (m.left + m.width / 2) - (w.left + w.width / 2);
+})();
 (function(){
   var forms = document.querySelectorAll(".editrow, .textedit");
   var leaving = false;

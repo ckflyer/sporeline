@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 	"net/http"
 	"net/url"
@@ -48,18 +47,17 @@ func (c *Component) TotalUnmarked() (g float64) {
 // earlier versions (or brought in from mycolog) is lost. The weight is
 // kept as unmarked because nobody said whether it was wet or dry.
 func (c *Component) upgradeHarvest() {
+	// Version 1.6 added an explanation to the converted flush. It was more
+	// noise than help, so it is taken back out, leaving anything you wrote.
+	for i := range c.FlushLog {
+		n := strings.TrimSpace(strings.TrimPrefix(c.FlushLog[i].Note, "This was the grow's total yield, so it may cover more than one flush."))
+		c.FlushLog[i].Note = strings.TrimSpace(strings.TrimPrefix(n, "Your old flush notes:"))
+	}
 	if c.Yield <= 0 && strings.TrimSpace(c.Flushes) == "" {
 		c.Yield, c.Flushes = 0, ""
 		return
 	}
-	note := ""
-	if c.Yield > 0 {
-		note = "This was the grow's total yield, so it may cover more than one flush."
-	}
-	if t := strings.TrimSpace(c.Flushes); t != "" {
-		note = strings.TrimSpace(note + " Your old flush notes: " + t)
-	}
-	old := Flush{Unmarked: c.Yield, Note: note}
+	old := Flush{Unmarked: c.Yield, Note: strings.TrimSpace(c.Flushes)}
 	c.FlushLog = append([]Flush{old}, c.FlushLog...)
 	c.Yield, c.Flushes = 0, ""
 }
@@ -137,7 +135,7 @@ func handleFlushSave(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			c.FlushLog = append(c.FlushLog, Flush{Date: date, Wet: wet, Dry: dry, Note: note})
-			msg = fmt.Sprintf("Flush %d added.", len(c.FlushLog))
+			msg = "" // the row itself shows it worked
 			return
 		}
 		n, ok := flushIndex(c, r)
@@ -150,7 +148,7 @@ func handleFlushSave(w http.ResponseWriter, r *http.Request) {
 		if _, sent := r.Form["note"]; sent {
 			f.Note = note
 		}
-		msg = fmt.Sprintf("Flush %d saved.", n+1)
+		msg = "" // the row itself shows it worked
 	})
 	backToCulture(w, r, c.ID, "harvest", msg)
 }
@@ -169,7 +167,7 @@ func handleFlushDelete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		c.FlushLog = append(c.FlushLog[:n], c.FlushLog[n+1:]...)
-		msg = fmt.Sprintf("Flush %d removed.", n+1)
+		msg = "" // the row itself shows it worked
 	})
 	backToCulture(w, r, c.ID, "harvest", msg)
 }
@@ -197,7 +195,7 @@ func handleFlushMark(w http.ResponseWriter, r *http.Request) {
 		}
 		f.Unmarked = 0
 	})
-	backToCulture(w, r, c.ID, "harvest", "Saved.")
+	backToCulture(w, r, c.ID, "harvest", "")
 }
 
 // handleTextSave saves the genetic remarks or the notes box.

@@ -74,10 +74,13 @@ func (s *Store) descendFrom(roots []string) []*Component {
 const (
 	nodeW = 132
 	nodeH = 46
-	gapX  = 18
+	gapX  = 46 // room between side-by-side branches
 	gapY  = 58
 	padX  = 16
 	padY  = 30
+	// labelW is a left margin for the "GEN 3" labels, so they never sit
+	// underneath a card.
+	labelW = 58
 )
 
 type placed struct {
@@ -184,12 +187,12 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 	at := map[string]placed{}
 	for r := 0; r <= maxRow; r++ {
 		rowW := len(rows[r])*(nodeW+gapX) - gapX
-		x0 := padX + (boardW-rowW)/2
+		x0 := labelW + padX + (boardW-rowW)/2
 		for i, c := range rows[r] {
 			at[c.ID] = placed{c: c, x: x0 + i*(nodeW+gapX), y: padY + r*(nodeH+gapY), row: r}
 		}
 	}
-	width := boardW + padX*2
+	width := labelW + boardW + padX*2
 	height := padY*2 + (maxRow+1)*(nodeH+gapY) - gapY
 
 	var b strings.Builder
@@ -199,9 +202,10 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 	// generation rules
 	for r := 0; r <= maxRow; r++ {
 		top := padY + r*(nodeH+gapY)
-		fmt.Fprintf(&b, `<line x1="0" y1="%d" x2="%d" y2="%d" stroke="#7C6553" stroke-dasharray="2 6"/>`, top-11, width, top-11)
-		fmt.Fprintf(&b, `<text x="2" y="%d" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="9" fill="#CDBBA3">G%d</text>`,
-			top-15, minGen+r)
+		mid := top + nodeH/2
+		fmt.Fprintf(&b, `<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="#6E5747" stroke-dasharray="2 6"/>`, labelW, mid, width, mid)
+		fmt.Fprintf(&b, `<text x="6" y="%d" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="10.5" letter-spacing="1" fill="#E3D5BF">GEN %d</text>`,
+			mid+4, minGen+r)
 	}
 	// edges
 	for _, c := range family {
@@ -233,7 +237,11 @@ func (s *Store) FamilySVG(family []*Component, currentID string) string {
 		if c.Sub != "" {
 			label = label + " · " + c.Sub
 		}
-		fmt.Fprintf(&b, `<a href="/component/%s"><g opacity="%s">`, html.EscapeString(c.ID), op)
+		cls := ""
+		if c.ID == currentID {
+			cls = ` class="this"`
+		}
+		fmt.Fprintf(&b, `<a href="/component/%s"%s><g opacity="%s">`, html.EscapeString(c.ID), cls, op)
 		fmt.Fprintf(&b, `<rect x="%d" y="%d" width="%d" height="%d" rx="6" fill="#FBFCF5" stroke="%s" stroke-width="%s"/>`,
 			p.x, p.y, nodeW, nodeH, stroke, sw)
 		fmt.Fprintf(&b, `<rect x="%d" y="%d" width="4" height="%d" rx="2" fill="%s"/>`, p.x, p.y, nodeH, k.Color)
