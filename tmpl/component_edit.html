@@ -37,25 +37,6 @@
     </div>
   </section>
 
-  {{if eq $c.Kind "grow"}}
-  <section>
-    <h4>Harvest</h4>
-    <div class="grid2">
-      <label class="f"><span>Total yield (grams)</span><input type="number" step="0.1" min="0" name="yield" value="{{if $c.Yield}}{{grams $c.Yield}}{{end}}" placeholder="0"></label>
-      <label class="f"><span>Flushes</span><input type="text" name="flushes" value="{{$c.Flushes}}" placeholder="1st 340, 2nd 190"></label>
-    </div>
-  </section>
-  {{end}}
-
-  <section>
-    <div class="twocol">
-      <div><h4>Genetic remarks {{help "Kept apart from notes so you can compare how a genetic performs across grows."}}</h4>
-        <textarea name="remarks" aria-label="Genetic remarks" placeholder="{{if eq $c.Kind "grow"}}How this genetic performed: speed, pin set, size, resilience{{else}}Growth rate, sector behaviour, anything about this genetic{{end}}">{{$c.Remarks}}</textarea></div>
-      <div><h4>Notes</h4>
-        <textarea name="notes" aria-label="Notes" placeholder="What you did, what happened">{{$c.Notes}}</textarea></div>
-    </div>
-  </section>
-
   <section>
     <div class="actionrow">
       <button class="btn">Save changes</button>
@@ -64,7 +45,8 @@
       <button class="btn warn" formaction="/component/{{$c.ID}}/delete" formnovalidate
         onclick="return confirm('Delete {{$c.ID}} for good? Marking it gone is usually what you want — that keeps the family tree intact.')">Delete</button>
     </div>
-    <p class="hint">Delete is only for mistakes. To record that you no longer have it, mark it gone.</p>
+    <p class="hint">Delete is only for mistakes. To record that you no longer have it, mark it gone.<br>
+      {{if eq $c.Kind "grow"}}Flushes, genetic remarks{{else}}Genetic remarks{{end}} and notes are edited straight on the <a href="/component/{{$c.ID}}">culture page</a>.</p>
   </section>
 </div>
 </form>

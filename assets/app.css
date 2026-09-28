@@ -300,3 +300,52 @@ td a.plain:hover{color:var(--primary)}
 .idrow .n{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:1.6em;text-align:right}
 .idrow .code{font-family:var(--mono);font-size:15px;letter-spacing:.04em;color:var(--ink)}
 .idrow:nth-child(10n),.idrow:last-child{border-bottom:0}
+
+/* ---------- harvest: one row per flush, edited in place ---------- */
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.sechead h4{margin:0}
+.totals{margin:0;color:var(--muted);font-size:14px}
+.totals b{font-family:var(--mono);color:var(--ink);font-weight:600}
+.flash{color:var(--primary);font-size:13.5px;margin:0 0 10px}
+.saverow .flash{margin:0}
+.flushes{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.flushrow{display:grid;grid-template-columns:52px minmax(130px,160px) minmax(70px,1fr) minmax(70px,1fr) 150px;
+  gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);margin:0}
+.flushrow.head{border-top:0;background:var(--card-2);padding-top:7px;padding-bottom:7px}
+.flushrow.head span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.flushrow input{height:36px;padding:6px 9px;font-family:var(--mono)}
+.fcell{display:block;margin:0}
+.mlabel{display:none}
+.flushrow input[type=date]{font-family:inherit}
+.fn{font-family:var(--mono);font-size:13px;color:var(--muted);padding-left:4px}
+.acts{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.fnote{grid-column:2/-1;margin:-2px 0 0;font-size:12.5px}
+.newrow{background:var(--card-2)}
+.newrow .fn{color:var(--primary)}
+.iconbtn{background:none;border:0;cursor:pointer;color:var(--muted);font-size:19px;line-height:1;padding:4px 6px;border-radius:6px}
+.iconbtn:hover{color:var(--danger);background:rgba(154,58,44,.08)}
+.flushold{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:10px 12px;
+  border-top:1px solid var(--line);background:#FBF4E4}
+.flushold p{margin:0}
+.flushold .hint{margin-top:3px;font-size:12.5px}
+/* with scripts on, Save only shows once something in that row or box changed */
+.js .save{visibility:hidden}
+.js.dirty .save{visibility:visible}
+.js.dirty{background:#F4F7EA}
+
+/* ---------- remarks and notes, edited in place ---------- */
+.textedit h4{margin-bottom:10px}
+.textedit textarea{min-height:110px;field-sizing:content;max-height:480px}
+.saverow{display:flex;align-items:center;gap:12px;margin-top:8px;min-height:30px}
+
+@media(max-width:700px){
+  .flushrow{grid-template-columns:34px 1fr 1fr;row-gap:8px}
+  .flushrow.head{display:none}
+  .flushrow .fcell.date{grid-column:2/-1}
+  .flushrow .fcell.wet{grid-column:2}
+  .mlabel{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+  .flushrow .acts{grid-column:1/-1}
+  .flushrow .fnote{grid-column:1/-1}
+  .flushold{grid-template-columns:34px 1fr}
+  .flushold form{grid-column:1/-1}
+}

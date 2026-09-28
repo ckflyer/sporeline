@@ -23,7 +23,7 @@ var assets embed.FS
 //go:embed tmpl
 var tmplFS embed.FS
 
-const version = "1.5"
+const version = "1.6"
 
 var store *Store
 
@@ -142,6 +142,10 @@ func main() {
 	mux.HandleFunc("POST /component/{id}/delete", handleDelete)
 	mux.HandleFunc("POST /component/{id}/pics", handleAddPics)
 	mux.HandleFunc("POST /component/{id}/pics/delete", handleDeletePic)
+	mux.HandleFunc("POST /component/{id}/flush", handleFlushSave)
+	mux.HandleFunc("POST /component/{id}/flush/delete", handleFlushDelete)
+	mux.HandleFunc("POST /component/{id}/flush/mark", handleFlushMark)
+	mux.HandleFunc("POST /component/{id}/text", handleTextSave)
 	mux.HandleFunc("GET /add", handleAddForm)
 	mux.HandleFunc("POST /add", handleAdd)
 	mux.HandleFunc("GET /recipes", handleRecipes)

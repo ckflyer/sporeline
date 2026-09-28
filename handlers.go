@@ -58,8 +58,10 @@ func loadTemplates() error {
 			if f == 0 {
 				return ""
 			}
-			return strconv.FormatFloat(f, 'f', -1, 64) + " g"
+			return weightText(f) + " g"
 		},
+		// the number alone, for putting back into a weight box
+		"weight": weightText,
 		"children":    func(id string) []*Component { return store.Children(id) },
 		"parents":     func(id string) []*Component { return store.Parents(id) },
 		"svg":         func(s string) template.HTML { return template.HTML(s) },
@@ -177,7 +179,7 @@ func handleList(w http.ResponseWriter, r *http.Request) {
 		}
 		if q != "" {
 			hay := strings.ToLower(strings.Join([]string{c.ID, c.Strain, c.Species, c.Sub,
-				c.Notes, c.Remarks, c.GoneNote, c.Flushes}, " "))
+				c.Notes, c.Remarks, c.GoneNote, flushNotes(c)}, " "))
 			if !strings.Contains(hay, q) {
 				return false
 			}
@@ -303,6 +305,7 @@ type compData struct {
 	AllStrains []string
 	Others     []*Component
 	NextKind   Kind
+	Msg, MsgAt string // a short "saved" message and which section it belongs to
 }
 
 func handleComponentEdit(w http.ResponseWriter, r *http.Request) {
@@ -344,6 +347,7 @@ func handleComponent(w http.ResponseWriter, r *http.Request) {
 		Family: store.FamilySVG(fam, c.ID), FullGraph: full, FamilySize: len(fam),
 		Subs: store.SubsFor(c.Kind), AllSpecies: store.Seen("species"), AllStrains: store.Seen("strain"),
 		Others: others, NextKind: KindOf(KindOf(c.Kind).Next),
+		Msg: r.URL.Query().Get("msg"), MsgAt: r.URL.Query().Get("at"),
 	}})
 }
 
@@ -378,15 +382,13 @@ func handleComponentUpdate(w http.ResponseWriter, r *http.Request) {
 		if d := r.FormValue("created"); d != "" {
 			c.Created = d
 		}
-		c.Notes = r.FormValue("notes")
-		c.Remarks = r.FormValue("remarks")
-		c.Flushes = strings.TrimSpace(r.FormValue("flushes"))
-		if y := strings.TrimSpace(r.FormValue("yield")); y != "" {
-			if f, err := strconv.ParseFloat(y, 64); err == nil && f >= 0 {
-				c.Yield = f
-			}
-		} else {
-			c.Yield = 0
+		// Harvest, remarks and notes are edited on the culture page itself.
+		// Only touch them here if an older page sent them.
+		if v, ok := r.Form["notes"]; ok {
+			c.Notes = v[0]
+		}
+		if v, ok := r.Form["remarks"]; ok {
+			c.Remarks = v[0]
 		}
 	})
 	http.Redirect(w, r, "/component/"+c.ID, http.StatusSeeOther)

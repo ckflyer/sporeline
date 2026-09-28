@@ -33,6 +33,12 @@ func newMux() http.Handler {
 	mux.HandleFunc("GET /add", handleAddForm)
 	mux.HandleFunc("POST /add", handleAdd)
 	mux.HandleFunc("POST /component/{id}/delete", handleDelete)
+	mux.HandleFunc("GET /component/{id}", handleComponent)
+	mux.HandleFunc("POST /component/{id}", handleComponentUpdate)
+	mux.HandleFunc("POST /component/{id}/flush", handleFlushSave)
+	mux.HandleFunc("POST /component/{id}/flush/delete", handleFlushDelete)
+	mux.HandleFunc("POST /component/{id}/flush/mark", handleFlushMark)
+	mux.HandleFunc("POST /component/{id}/text", handleTextSave)
 	return guard(mux)
 }
 

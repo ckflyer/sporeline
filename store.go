@@ -75,9 +75,12 @@ type Component struct {
 	Gen        int      `json:"gen"`
 	Created    string   `json:"created"` // YYYY-MM-DD
 	Notes      string   `json:"notes,omitempty"`
-	Remarks    string   `json:"remarks,omitempty"` // genetic remarks, grows
-	Yield      float64  `json:"yield,omitempty"`   // grams, grows
-	Flushes    string   `json:"flushes,omitempty"` // free text: "1st 340g, 2nd 190g"
+	Remarks    string   `json:"remarks,omitempty"` // what this genetic is like
+	FlushLog   []Flush  `json:"flushLog,omitempty"` // grows: one entry per flush
+	// Older versions kept one total and a free-text line. They are read
+	// so old logs and backups still open, then turned into FlushLog.
+	Yield   float64 `json:"yield,omitempty"`
+	Flushes string  `json:"flushes,omitempty"`
 	Gone       bool     `json:"gone"`
 	GoneAt     string   `json:"goneAt,omitempty"`
 	GoneReason string   `json:"goneReason,omitempty"` // used / contaminated / discarded / lost / unknown
@@ -181,7 +184,15 @@ func OpenStore(dir string) (*Store, error) {
 	if s.data.Settings.BackupKeep == 0 {
 		s.data.Settings = defaultSettings()
 	}
+	s.upgrade()
 	return s, nil
+}
+
+// upgrade brings entries written by older versions up to date.
+func (s *Store) upgrade() {
+	for _, c := range s.data.Components {
+		c.upgradeHarvest()
+	}
 }
 
 func (s *Store) PicsDir() string    { return filepath.Join(s.dir, "pics") }
@@ -190,6 +201,7 @@ func (s *Store) Dir() string        { return s.dir }
 
 // flush writes atomically: temp file, then rename over the original.
 func (s *Store) flush() error {
+	s.upgrade() // catches anything old that came in by restore or import
 	b, err := json.MarshalIndent(s.data, "", "  ")
 	if err != nil {
 		return err

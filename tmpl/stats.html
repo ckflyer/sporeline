@@ -56,22 +56,28 @@
   {{end}}
 </div>
 
-{{if $s.GrowsWithYield}}
+{{if or $s.WetGrows $s.DryGrows $s.UnmarkedGrows}}
 <div class="panel">
   <h3>Harvest</h3>
-  <div class="statgrid">
-    <div><b>{{grams $s.TotalYield}}</b><span>total</span></div>
-    <div><b>{{grams $s.AvgYield}}</b><span>average per grow</span></div>
-    <div><b>{{$s.GrowsWithYield}}</b><span>grows weighed</span></div>
-  </div>
-  {{if $s.BestGrow}}<p class="hint">Best single grow: <a href="/component/{{$s.BestGrow.ID}}">{{$s.BestGrow.ID}}</a>, {{$s.BestGrow.Title}}, {{grams $s.BestGrow.Yield}}.</p>{{end}}
+  {{if $s.DryGrows}}<div class="statgrid">
+    <div><b>{{grams $s.TotalDry}}</b><span>total dry</span></div>
+    <div><b>{{grams $s.AvgDry}}</b><span>average dry per grow</span></div>
+    <div><b>{{$s.DryGrows}}</b><span>grows weighed dry</span></div>
+  </div>{{end}}
+  {{if $s.WetGrows}}<div class="statgrid"{{if $s.DryGrows}} style="margin-top:14px"{{end}}>
+    <div><b>{{grams $s.TotalWet}}</b><span>total wet</span></div>
+    <div><b>{{grams $s.AvgWet}}</b><span>average wet per grow</span></div>
+    <div><b>{{$s.WetGrows}}</b><span>grows weighed wet</span></div>
+  </div>{{end}}
+  {{if $s.BestGrow}}<p class="hint">Best single grow: <a href="/component/{{$s.BestGrow.ID}}">{{$s.BestGrow.ID}}</a>, {{$s.BestGrow.Title}}, {{grams $s.BestGrams}} {{$s.BestState}}.</p>{{end}}
+  {{if $s.UnmarkedGrows}}<p class="hint">{{$s.UnmarkedGrows}} {{if eq $s.UnmarkedGrows 1}}grow has a weight{{else}}grows have weights{{end}} from before wet and dry were tracked, so {{if eq $s.UnmarkedGrows 1}}it is{{else}}they are{{end}} left out above. Open the grow and say which it was to include it. <a href="/list/grow">See grows</a></p>{{end}}
 </div>
 {{end}}
 
 <div class="panel">
   <h3>By strain</h3>
   <table>
-    <thead><tr><th>Strain</th><th>Logged</th><th class="hide-s">Lost to contamination</th><th class="hide-s">Grows</th><th>Average yield</th></tr></thead>
+    <thead><tr><th>Strain</th><th>Logged</th><th class="hide-s">Lost to contamination</th><th class="hide-s">Grows</th><th>Avg dry</th><th class="hide-s">Avg wet</th></tr></thead>
     <tbody>
     {{range $s.Strain}}
       <tr>
@@ -79,7 +85,8 @@
         <td style="font-family:var(--mono)">{{.Total}}</td>
         <td class="hide-s" style="color:var(--muted)">{{if .Lost}}{{.Lost}} · {{.LossPercent}}%{{else}}—{{end}}</td>
         <td class="hide-s" style="color:var(--muted)">{{if .Grows}}{{.Grows}}{{else}}—{{end}}</td>
-        <td style="font-family:var(--mono)">{{if .AvgYield}}{{grams .AvgYield}}{{else}}—{{end}}</td>
+        <td style="font-family:var(--mono)">{{if .AvgDry}}{{grams .AvgDry}}{{else}}—{{end}}</td>
+        <td class="hide-s" style="font-family:var(--mono)">{{if .AvgWet}}{{grams .AvgWet}}{{else}}—{{end}}</td>
       </tr>
     {{end}}
     </tbody>

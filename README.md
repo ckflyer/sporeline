@@ -12,7 +12,8 @@ There is no account, no server and no internet connection.
   made from it
 - Short printable IDs so the label on the jar matches the entry on screen
 - Recipes that scale to whatever batch size you need
-- Yields and genetic remarks on grows
+- Flush-by-flush harvests with wet and dry weights, edited right on the grow's page
+- Genetic remarks kept apart from everyday notes, so you can compare lines
 - Contamination tracking, with a statistics page showing where in the process
   you lose things
 - Pictures, daily backups, and an importer for mycolog

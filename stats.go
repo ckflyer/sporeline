@@ -29,9 +29,11 @@ type strainStat struct {
 	Total       int
 	Lost        int
 	LossPercent int
-	Grows       int
-	Yield       float64
-	AvgYield    float64
+	Grows       int // grows with at least one weight
+	wet, dry    float64
+	wetN, dryN  int
+	AvgWet      float64
+	AvgDry      float64
 }
 
 type statsPage struct {
@@ -42,10 +44,15 @@ type statsPage struct {
 	ByStage               []contamStat
 	Contaminated          int
 	ContamRate            int
-	TotalYield            float64
-	GrowsWithYield        int
-	AvgYield              float64
+	// Wet and dry weights are never added together: a dry flush weighs
+	// roughly a tenth of a wet one, so mixing them would mean nothing.
+	TotalWet, TotalDry    float64
+	WetGrows, DryGrows    int
+	AvgWet, AvgDry        float64
+	UnmarkedGrows         int // grows holding an old weight not yet marked wet or dry
 	BestGrow              *Component
+	BestGrams             float64
+	BestState             string // "dry" or "wet"
 	Strain                []strainStat
 	OldestOnHand          *Component
 	OldestAge             int
@@ -105,20 +112,53 @@ func buildStats() statsPage {
 				}
 			}
 		}
-		if c.Kind == "grow" && c.Yield > 0 {
-			s.TotalYield += c.Yield
-			s.GrowsWithYield++
-			st.Grows++
-			st.Yield += c.Yield
-			if s.BestGrow == nil || c.Yield > s.BestGrow.Yield {
-				s.BestGrow = c
+		if c.Kind == "grow" {
+			wet, dry := c.TotalWet(), c.TotalDry()
+			if wet > 0 {
+				s.TotalWet += wet
+				s.WetGrows++
+				st.wet += wet
+				st.wetN++
 			}
+			if dry > 0 {
+				s.TotalDry += dry
+				s.DryGrows++
+				st.dry += dry
+				st.dryN++
+			}
+			if wet > 0 || dry > 0 {
+				st.Grows++
+			}
+			if c.TotalUnmarked() > 0 {
+				s.UnmarkedGrows++
+			}
+		}
+	}
+	// Best grow goes by dry weight when there is any, since that is what
+	// is left in the jar; otherwise by wet.
+	s.BestState = "wet"
+	if s.DryGrows > 0 {
+		s.BestState = "dry"
+	}
+	for _, c := range all {
+		if c.Kind != "grow" {
+			continue
+		}
+		g := c.TotalWet()
+		if s.BestState == "dry" {
+			g = c.TotalDry()
+		}
+		if g > s.BestGrams {
+			s.BestGrow, s.BestGrams = c, g
 		}
 	}
 
 	s.Strains, s.SpeciesCount = len(strains), len(species)
-	if s.GrowsWithYield > 0 {
-		s.AvgYield = s.TotalYield / float64(s.GrowsWithYield)
+	if s.WetGrows > 0 {
+		s.AvgWet = s.TotalWet / float64(s.WetGrows)
+	}
+	if s.DryGrows > 0 {
+		s.AvgDry = s.TotalDry / float64(s.DryGrows)
 	}
 	s.Contaminated = reasons["contaminated"]
 	if s.Total > 0 {
@@ -140,8 +180,11 @@ func buildStats() statsPage {
 		if st.Total > 0 {
 			st.LossPercent = st.Lost * 100 / st.Total
 		}
-		if st.Grows > 0 {
-			st.AvgYield = st.Yield / float64(st.Grows)
+		if st.wetN > 0 {
+			st.AvgWet = st.wet / float64(st.wetN)
+		}
+		if st.dryN > 0 {
+			st.AvgDry = st.dry / float64(st.dryN)
 		}
 		s.Strain = append(s.Strain, *st)
 	}
