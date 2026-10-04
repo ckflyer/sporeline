@@ -22,7 +22,8 @@ your jars stay correct.
 Backups
 -------
 Sporeline copies your log into a backups folder once a day when it
-starts, and before any import. See the Settings page.
+starts, and before any import. "Save backup file" on the Data page
+makes one file with everything, pictures included.
 
 What else is in here
 --------------------

@@ -1,0 +1,76 @@
+# Builds Sporeline and publishes a GitHub Release whenever a version tag
+# such as v1.8 is pushed. ./release.sh does the tagging for you.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # needed to create the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Check the tag matches the version in main.go
+        run: |
+          want="v$(sed -n 's/^const version = "\(.*\)"/\1/p' main.go)"
+          if [ "$GITHUB_REF_NAME" != "$want" ]; then
+            echo "::error::Tag is $GITHUB_REF_NAME but main.go says $want. Change const version in main.go to match."
+            exit 1
+          fi
+
+      - name: Test
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build
+        run: |
+          mkdir dist
+          build() { CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -trimpath -ldflags="-s -w" -o "$3" .; }
+          # Windows: the plain exe, which is what the README tells people to download.
+          build windows amd64 dist/sporeline.exe
+          # Mac and Linux: packed so the file keeps permission to run.
+          for t in "darwin arm64 mac-apple-silicon" "darwin amd64 mac-intel" "linux amd64 linux"; do
+            set -- $t
+            build "$1" "$2" sporeline
+            tar -czf "dist/sporeline-$3.tar.gz" sporeline README.md LICENSE NOTICE
+            rm sporeline
+          done
+          cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Write release notes from CHANGELOG.md
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## " v "([^0-9.]|$)" {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for $v. Add a '## $v' heading."
+            exit 1
+          fi
+          cat >> notes.md <<'NOTES'
+
+          ---
+          **Windows:** download `sporeline.exe` and double-click it. If Windows says it protected your PC, click **More info**, then **Run anyway**.
+
+          **Mac / Linux:** download the `.tar.gz` for your machine, unpack it and run `sporeline`. These builds are not signed; on a Mac, right-click it and choose **Open** the first time.
+
+          Upgrading is just replacing the old file. Your log lives in its own folder and is not touched.
+          NOTES
+          sed -i 's/^          //' notes.md
+          cat notes.md
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "Sporeline ${GITHUB_REF_NAME#v}" \
+            --notes-file notes.md

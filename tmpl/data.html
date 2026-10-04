@@ -18,10 +18,24 @@
   <h3>Backup</h3>
   <div class="btnrow">
     <a class="btn" href="/export">Save backup file</a>
+    <a class="btn ghost" href="/export?pics=0">Without pictures</a>
     <form method="post" action="/backup/now" style="margin:0"><button class="btn ghost">Back up now</button></form>
   </div>
-  <p class="hint">One file with every culture and recipe. Pictures stay in the pics folder.{{if $d.S.LastBackup}} Last backup {{$d.S.LastBackup}}.{{end}}</p>
+  <p class="hint">One file with every culture, recipe and picture, ready to import on another computer.
+    "Without pictures" is much smaller; every culture still remembers its picture names, so you can put the pictures back later below.{{if $d.S.LastBackup}} Last backup {{$d.S.LastBackup}}.{{end}}</p>
 </div>
+
+{{if $d.Missing}}
+<div class="panel">
+  <h3>Missing pictures</h3>
+  <p style="margin:0 0 10px">Your log names <b>{{$d.Missing}}</b> picture{{if ne $d.Missing 1}}s{{end}} that {{if eq $d.Missing 1}}is{{else}}are{{end}} not in the pics folder, usually after importing a file saved without them.</p>
+  <form method="post" action="/pics/reattach" enctype="multipart/form-data" class="inlineform">
+    <input type="file" name="pic" multiple accept="image/*" style="max-width:420px">
+    <button class="btn">Put pictures back</button>
+  </form>
+  <p class="hint">Choose the files from your old pics folder. Each one goes back on the right culture by its file name; anything that does not match is left out.</p>
+</div>
+{{end}}
 
 <div class="panel">
   <h3>Automatic backups</h3>

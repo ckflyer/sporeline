@@ -133,7 +133,7 @@ results.addEventListener("click", function(e){
       <td><a href="/component/{{.ID}}" class="plain">{{.Title}}</a>{{with .Subtitle}} <span style="color:var(--muted)">{{.}}</span>{{end}}{{if .Sub}} <span style="color:var(--muted)">· {{.Sub}}</span>{{end}}</td>
       <td class="hide-s"><span class="tag"><i style="background:{{$kind.Color}}"></i>{{$kind.Name}}</span></td>
       <td class="hide-s">{{date .Created}}</td>
-      <td>{{if .Gone}}<span class="badge gone">Gone</span>{{if ne .GoneReason "unknown"}} <span class="label">{{goneLabel .GoneReason}}</span>{{end}}{{else}}<span style="color:var(--muted)">On hand</span>{{end}}</td>
+      <td>{{if .Gone}}<span class="status gone sm" style="--rc:{{goneColor .GoneReason}}">Gone{{with goneLabel .GoneReason}}<span class="why">{{.}}</span>{{end}}</span>{{else}}<span style="color:var(--muted)">On hand</span>{{end}}</td>
     </tr>
   {{end}}
   </tbody>

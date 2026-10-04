@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,4 +121,63 @@ func (s *Store) CleanRemovedPics() {
 			os.Remove(filepath.Join(s.RemovedPicsDir(), e.Name()))
 		}
 	}
+}
+
+// writeBundle streams the log as an import file. Pictures are encoded
+// one at a time straight into the output, so a big pics folder does not
+// have to fit in memory all at once.
+func writeBundle(w io.Writer, d Data, withPics bool) error {
+	head, err := json.MarshalIndent(d, "", "  ")
+	if err != nil {
+		return err
+	}
+	if !withPics {
+		_, err := w.Write(head)
+		return err
+	}
+	// Reopen the closing brace of the log object and add "pictures".
+	head = bytes.TrimRight(head[:bytes.LastIndexByte(head, '}')], " \n")
+	if _, err := w.Write(head); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, ",\n  \"pictures\": {"); err != nil {
+		return err
+	}
+	first := true
+	seen := map[string]bool{}
+	for _, c := range d.Components {
+		for _, p := range c.Pics {
+			name := filepath.Base(p)
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			f, err := os.Open(filepath.Join(store.PicsDir(), name))
+			if err != nil {
+				continue // missing on disk; the entry still names it
+			}
+			key, _ := json.Marshal(name)
+			sep := ",\n    "
+			if first {
+				sep, first = "\n    ", false
+			}
+			io.WriteString(w, sep)
+			w.Write(key)
+			io.WriteString(w, `: "`)
+			enc := base64.NewEncoder(base64.StdEncoding, w)
+			_, cpErr := io.Copy(enc, f)
+			f.Close()
+			if err := enc.Close(); err != nil {
+				return err
+			}
+			if cpErr != nil {
+				return cpErr
+			}
+			if _, err := io.WriteString(w, `"`); err != nil {
+				return err
+			}
+		}
+	}
+	_, err = io.WriteString(w, "\n  }\n}\n")
+	return err
 }

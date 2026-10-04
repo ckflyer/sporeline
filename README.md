@@ -68,6 +68,13 @@ and always before an import or a restore. It keeps the last thirty. You can
 change that, restore an earlier copy, or save a single backup file from the
 **Data & settings** page.
 
+The single backup file carries your pictures inside it, so one file moves
+everything to another computer. There is also a smaller version without
+pictures. Every culture still remembers its picture names, so if you import
+that one, the **Data & settings** page lists what is missing and lets you
+pick the files from your old `pics` folder. Each one goes back on the right
+culture by name.
+
 ## IDs
 
 Every entry gets a six-character ID. The first two letters say what it is, the
@@ -107,7 +114,12 @@ with the default settings), it is erased for good.
 ## Version
 
 The version is shown at the bottom of the sidebar, and printed in the black
-window when Sporeline starts.
+window when Sporeline starts. What changed in each one is in
+[CHANGELOG.md](CHANGELOG.md) and on the Releases page.
+
+On a Mac or Linux, download the `.tar.gz` for your machine from Releases
+instead, unpack it and run `sporeline`. Those builds are not signed, so on a
+Mac right-click it and choose **Open** the first time.
 
 ## Options
 
@@ -145,6 +157,26 @@ picks up on its own. To rebuild it after changing `assets/sporeline.ico`:
 go install github.com/akavel/rsrc@latest
 rsrc -ico assets/sporeline.ico -arch amd64 -o rsrc_windows_amd64.syso
 ```
+
+## Making a release
+
+Releases are built by GitHub, not on your computer, so every download comes
+from the code in the repository and the tests have passed first.
+
+1. Change `const version` in `main.go`, for example to `"1.9"`.
+2. Add a `## 1.9` section at the top of `CHANGELOG.md`. It becomes the notes
+   on the release page, so write it for the people downloading.
+3. Commit with `./push.sh`, then run `./release.sh`.
+
+`release.sh` refuses if anything is uncommitted, if the changelog has no
+section for the version, or if that version was already released. Otherwise
+it pushes a tag such as `v1.9`. GitHub then runs the tests, builds Windows,
+Mac and Linux versions, and publishes them with checksums
+(`.github/workflows/release.yml`). Progress shows on the repository's
+**Actions** tab, and the release appears a few minutes later.
+
+Every push to `main` also runs the tests, so a red cross next to a commit
+means something broke before anyone tries to release it.
 
 ## Credit
 

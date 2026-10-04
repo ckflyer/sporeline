@@ -46,17 +46,17 @@ type statsPage struct {
 	ContamRate            int
 	// Wet and dry weights are never added together: a dry flush weighs
 	// roughly a tenth of a wet one, so mixing them would mean nothing.
-	TotalWet, TotalDry    float64
-	WetGrows, DryGrows    int
-	AvgWet, AvgDry        float64
-	UnmarkedGrows         int // grows holding an old weight not yet marked wet or dry
-	BestGrow              *Component
-	BestGrams             float64
-	BestState             string // "dry" or "wet"
-	Strain                []strainStat
-	OldestOnHand          *Component
-	OldestAge             int
-	Enough                bool
+	TotalWet, TotalDry float64
+	WetGrows, DryGrows int
+	AvgWet, AvgDry     float64
+	UnmarkedGrows      int // grows holding an old weight not yet marked wet or dry
+	BestGrow           *Component
+	BestGrams          float64
+	BestState          string // "dry" or "wet"
+	Strain             []strainStat
+	OldestOnHand       *Component
+	OldestAge          int
+	Enough             bool
 }
 
 func buildStats() statsPage {

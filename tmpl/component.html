@@ -21,7 +21,7 @@
         {{range kinds}}<span><i style="background:{{.Color}}"></i>{{.Name}}</span>{{end}}
         <span><i class="k-gone"></i>Gone</span>
         <span><i class="k-this"></i>This one</span>
-        <span class="genkey">GEN = generation, the steps from where the line started. It is also the digit in each ID: {{$c.ID}} is generation {{$c.Gen}}.</span>
+        <span class="genkey">GEN = generation, the steps from where the line started.{{if $c.IDShowsGen}} It is also the digit in each ID: {{$c.ID}} is generation {{$c.Gen}}.{{else}} {{$c.ID}} is generation {{$c.Gen}}.{{end}}</span>
       </p>
       <p class="treecount"><span class="tipleft">{{$d.FamilySize}} in view {{help "Close family is this one, its siblings and everything made from them. The whole tree adds every ancestor and their other branches."}}</span>
       <span class="sep">·</span>
@@ -37,10 +37,6 @@
       {{if $c.Strain}}<div class="field"><span>Strain</span><b>{{$c.Strain}}</b></div>{{end}}
       {{if $c.Species}}<div class="field"><span>Species</span><b>{{$c.Species}}</b></div>{{end}}
       <div class="field"><span>Started</span><b>{{date $c.Created}}</b><em>{{age $c.Created}}</em></div>
-      <div class="field"><span>Status</span>
-        {{if $c.Gone}}<b><span class="badge gone">Gone</span>{{if ne $c.GoneReason "unknown"}} <span class="label">{{goneLabel $c.GoneReason}}</span>{{end}}</b>
-          {{if or $c.GoneAt $c.GoneNote}}<em>{{if $c.GoneAt}}{{date $c.GoneAt}}{{end}}{{if $c.GoneNote}}{{if $c.GoneAt}} · {{end}}{{$c.GoneNote}}{{end}}</em>{{end}}
-        {{else}}<b>On hand</b>{{end}}</div>
     </div>
   </section>
 
@@ -129,32 +125,62 @@
     </div>
   </section>
 
-  <section>
-    {{if $c.Gone}}
-      <h4>No longer here</h4>
-      <form method="post" action="/component/{{$c.ID}}/gone">
-        <input type="hidden" name="back" value="1">
-        <button class="btn ghost sm">Back on hand</button></form>
-    {{else}}
-      <h4>Mark as gone</h4>
-      <form method="post" action="/component/{{$c.ID}}/gone" class="gonerow">
-        <label class="f"><span>What happened</span>
-          <select name="reason">{{range goneReasons}}<option value="{{.Key}}">{{.Label}}</option>{{end}}</select></label>
-        <label class="f"><span>When</span><input type="date" name="goneAt" value="{{today}}"></label>
-        <label class="f gonenote"><span>Notes</span>
-          <input type="text" name="goneNote" placeholder="Optional"></label>
-        <button class="btn warn">Mark as gone</button>
-      </form>
-    {{end}}
+  <section id="availability">
+    <h4>Availability</h4>
+    <div class="avail">
+      {{if $c.Gone}}
+      <div class="availstate">
+        <span class="status gone" style="--rc:{{goneColor $c.GoneReason}}">Gone{{with goneLabel $c.GoneReason}}<span class="why">{{.}}</span>{{end}}</span>
+        {{if or $c.GoneAt $c.GoneNote}}<p class="availmeta">{{if $c.GoneAt}}Since {{date $c.GoneAt}}{{end}}{{if $c.GoneNote}}{{if $c.GoneAt}} · {{end}}{{$c.GoneNote}}{{end}}</p>{{end}}
+      </div>
+      <div class="btnrow">
+        <button type="button" class="btn ghost sm" data-open="gonedlg">Change details</button>
+        <form method="post" action="/component/{{$c.ID}}/gone" style="margin:0">
+          <input type="hidden" name="back" value="1">
+          <button class="btn ghost sm">Back on hand</button></form>
+      </div>
+      {{else}}
+      <div class="availstate">
+        <span class="status here">On hand</span>
+        <p class="availmeta">In your collection since {{date $c.Created}}</p>
+      </div>
+      <button type="button" class="btn ghost sm" data-open="gonedlg">Mark as gone…</button>
+      {{end}}
+    </div>
   </section>
+
+  <dialog id="gonedlg" class="dlg" aria-labelledby="gonedlg-title">
+    <form method="post" action="/component/{{$c.ID}}/gone">
+      <h3 id="gonedlg-title">{{if $c.Gone}}Why <span class="mono">{{$c.ID}}</span> is gone{{else}}Mark <span class="mono">{{$c.ID}}</span> as gone{{end}}</h3>
+      <p class="hint" style="margin:0 0 16px">It stays in your log and its family tree, greyed out. You can put it back on hand at any time.</p>
+      <fieldset class="reasons">
+        <legend>What happened?</legend>
+        {{range $i, $r := goneReasons}}
+        <label class="reason" style="--rc:{{$r.Color}}">
+          <input type="radio" name="reason" value="{{$r.Key}}" {{if eq $i 0}}required{{end}} {{if and $c.Gone (eq $c.GoneReason $r.Key)}}checked{{end}}>
+          <span><b>{{$r.Label}}</b><em>{{$r.Hint}}</em></span>
+        </label>
+        {{end}}
+      </fieldset>
+      <div class="dlgrow">
+        <label class="f"><span>When</span><input type="date" name="goneAt" value="{{if $c.GoneAt}}{{$c.GoneAt}}{{else}}{{today}}{{end}}" required></label>
+        <label class="f grow"><span>Notes (optional)</span><input type="text" name="goneNote" value="{{$c.GoneNote}}" placeholder="e.g. green patch on day 9"></label>
+      </div>
+      <div class="dlgacts">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button class="btn {{if not $c.Gone}}danger{{end}}">{{if $c.Gone}}Save{{else}}Mark as gone{{end}}</button>
+      </div>
+    </form>
+  </dialog>
 
   <section class="pics">
     <h4>Pictures</h4>
     {{if $c.Pics}}<div class="shots" style="margin-bottom:12px">
       {{range $c.Pics}}<div class="shot">
-        <a href="/pics/{{.}}" target="_blank"><img src="/pics/{{.}}" alt="" loading="lazy"></a>
+        {{if index $d.Missing .}}<div class="missing" title="This picture is named in your log but the file is not in the pics folder. Put it back from Data &amp; settings.">Missing<small>{{.}}</small></div>
+        {{else}}<a href="/pics/{{.}}" target="_blank"><img src="/pics/{{.}}" alt="" loading="lazy"></a>{{end}}
         <form method="post" action="/component/{{$c.ID}}/pics/delete">
-          <input type="hidden" name="name" value="{{.}}"><button title="Remove">&times;</button></form>
+          <input type="hidden" name="name" value="{{.}}"><button title="Remove picture" onclick="return confirm('Remove this picture?')">&times;</button></form>
       </div>{{end}}
     </div>{{end}}
     <form method="post" action="/component/{{$c.ID}}/pics" enctype="multipart/form-data">
@@ -164,6 +190,16 @@
   </section>
 </div>
 <script>
+(function(){
+  document.querySelectorAll("[data-open]").forEach(function(b){
+    b.addEventListener("click", function(){ document.getElementById(b.dataset.open).showModal(); });
+  });
+  document.querySelectorAll("dialog").forEach(function(d){
+    d.querySelectorAll("[data-close]").forEach(function(b){ b.addEventListener("click", function(){ d.close(); }); });
+    // A click on the dimmed area outside the box closes it too.
+    d.addEventListener("click", function(e){ if (e.target === d) d.close(); });
+  });
+})();
 // When the tree is wider than the screen, start with this culture in view.
 (function(){
   var wrap = document.querySelector(".treewrap"), me = wrap && wrap.querySelector("a.this");

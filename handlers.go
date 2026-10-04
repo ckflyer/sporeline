@@ -23,7 +23,6 @@ func loadTemplates() error {
 	funcs := template.FuncMap{
 		"kinds":  func() []Kind { return Kinds },
 		"kindOf": KindOf,
-		"cats":   func() []string { return Categories },
 		"date": func(s string) string {
 			t, err := time.Parse("2006-01-02", s)
 			if err != nil {
@@ -61,7 +60,7 @@ func loadTemplates() error {
 			return weightText(f) + " g"
 		},
 		// the number alone, for putting back into a weight box
-		"weight": weightText,
+		"weight":      weightText,
 		"children":    func(id string) []*Component { return store.Children(id) },
 		"parents":     func(id string) []*Component { return store.Parents(id) },
 		"svg":         func(s string) template.HTML { return template.HTML(s) },
@@ -80,6 +79,7 @@ func loadTemplates() error {
 			return template.JS(b)
 		},
 		"goneLabel": GoneReasonLabel,
+		"goneColor": GoneReasonColor,
 		"join":      strings.Join,
 		"counts": func() map[string]int {
 			m := map[string]int{"all": 0, "recipes": len(store.Recipes())}
@@ -152,7 +152,9 @@ type listData struct {
 
 func handleList(w http.ResponseWriter, r *http.Request) {
 	kind := r.PathValue("kind")
-	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	// Show the search back exactly as typed; match without caring about case.
+	typed := strings.TrimSpace(r.URL.Query().Get("q"))
+	q := strings.ToLower(typed)
 	show := r.URL.Query().Get("show")
 	// The status filter sticks between visits: it is the one people set
 	// once and want to stay set.
@@ -225,7 +227,7 @@ func handleList(w http.ResponseWriter, r *http.Request) {
 		k = Kind{Key: "all", Name: "Everything", Plural: "Everything"}
 	}
 	data := listData{
-		Kind: k, KindKey: kind, Items: items, Q: q, Show: show, Species: species, Strain: strain,
+		Kind: k, KindKey: kind, Items: items, Q: typed, Show: show, Species: species, Strain: strain,
 		AllSpecies: store.Seen("species"), AllStrains: store.Seen("strain"),
 		Counts: counts, Total: len(items), Pool: counts[kind],
 		Filtered:  q != "" || species != "" || strain != "" || show != "",
@@ -306,6 +308,7 @@ type compData struct {
 	Others     []*Component
 	NextKind   Kind
 	Msg, MsgAt string // a short "saved" message and which section it belongs to
+	Missing    map[string]bool
 }
 
 func handleComponentEdit(w http.ResponseWriter, r *http.Request) {
@@ -348,6 +351,7 @@ func handleComponent(w http.ResponseWriter, r *http.Request) {
 		Subs: store.SubsFor(c.Kind), AllSpecies: store.Seen("species"), AllStrains: store.Seen("strain"),
 		Others: others, NextKind: KindOf(KindOf(c.Kind).Next),
 		Msg: r.URL.Query().Get("msg"), MsgAt: r.URL.Query().Get("at"),
+		Missing: missingFor(c),
 	}})
 }
 
@@ -412,9 +416,11 @@ func handleGone(w http.ResponseWriter, r *http.Request) {
 		if d := r.FormValue("goneAt"); d != "" {
 			c.GoneAt = d
 		}
-		c.GoneReason = r.FormValue("reason")
-		if c.GoneReason == "" {
-			c.GoneReason = "unknown"
+		c.GoneReason = "unknown"
+		for _, gr := range GoneReasons {
+			if gr.Key == r.FormValue("reason") {
+				c.GoneReason = gr.Key
+			}
 		}
 		c.GoneNote = strings.TrimSpace(r.FormValue("goneNote"))
 	})
@@ -714,6 +720,7 @@ type dataPage struct {
 	Notice     string
 	GuessPath  string
 	GuessFound bool
+	Missing    int
 }
 
 func handleDataPage(w http.ResponseWriter, r *http.Request) {
@@ -730,6 +737,7 @@ func handleDataPage(w http.ResponseWriter, r *http.Request) {
 		S: store.Settings(), Backups: store.Backups(), BackupsDir: store.BackupsDir(),
 		Dir: store.Dir(), Count: len(store.All()), Recipes: len(store.Recipes()), Pics: pics,
 		Notice: r.URL.Query().Get("notice"), GuessPath: guess, GuessFound: statErr == nil,
+		Missing: len(missingPics()),
 	}})
 }
 
@@ -822,14 +830,25 @@ func importFromFolder(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/data?notice="+urlEscape(notice), http.StatusSeeOther)
 }
 
+// handleExport saves one file holding the whole log. Unless asked not
+// to, the pictures ride along inside it, so a single file moves
+// everything to another computer. Each entry keeps its picture file
+// names either way, so pictures left out can be put back later from the
+// Data page and land on the right culture.
 func handleExport(w http.ResponseWriter, r *http.Request) {
 	d := store.Snapshot()
+	withPics := r.URL.Query().Get("pics") != "0"
+	name := "sporeline-" + time.Now().Format("2006-01-02")
+	if withPics {
+		name += "-with-pictures"
+	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Content-Disposition",
-		fmt.Sprintf(`attachment; filename="sporeline-%s.json"`, time.Now().Format("2006-01-02")))
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	enc.Encode(d)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`.json"`)
+	if err := writeBundle(w, d, withPics); err != nil {
+		// Headers are already sent; the truncated file will fail to import
+		// rather than import half a log, which is the safe way round.
+		fmt.Println("  Export stopped early:", err)
+	}
 }
 
 // bundle is what an import file looks like: the same data, plus any
@@ -905,6 +924,81 @@ func splitIDs(s string) []string {
 	return out
 }
 
-func urlEscape(s string) string {
-	return strings.NewReplacer(" ", "+", "&", "%26", "?", "%3F", "#", "%23").Replace(s)
+// urlEscape makes a message safe to carry in a link. The old version
+// only handled four characters, so a "+" or "%" in a backup name came out
+// garbled on the next page.
+func urlEscape(s string) string { return url.QueryEscape(s) }
+
+// ---------- missing pictures ----------
+
+// missingPics lists picture names the log mentions but the pics folder
+// does not have, for example after importing a file saved without them.
+func missingPics() map[string]string {
+	out := map[string]string{} // file name -> culture ID
+	for _, c := range store.All() {
+		for _, p := range c.Pics {
+			if _, err := os.Stat(filepath.Join(store.PicsDir(), filepath.Base(p))); err != nil {
+				out[filepath.Base(p)] = c.ID
+			}
+		}
+	}
+	return out
+}
+
+// handlePicsReattach takes picture files and puts each one back where
+// the log expects it, matched by file name. Files the log does not ask
+// for are ignored, and nothing already in place is overwritten.
+func handlePicsReattach(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(64 << 20); err != nil {
+		http.Redirect(w, r, "/data?notice="+urlEscape("That upload was too large. Try fewer pictures at a time."), http.StatusSeeOther)
+		return
+	}
+	want := missingPics()
+	placed, ignored := 0, 0
+	for _, fh := range r.MultipartForm.File["pic"] {
+		name := filepath.Base(fh.Filename)
+		if _, ok := want[name]; !ok {
+			ignored++
+			continue
+		}
+		f, err := fh.Open()
+		if err != nil {
+			continue
+		}
+		raw, err := io.ReadAll(io.LimitReader(f, 24<<20))
+		f.Close()
+		if err != nil {
+			continue
+		}
+		if os.WriteFile(filepath.Join(store.PicsDir(), name), raw, 0o600) == nil {
+			placed++
+			delete(want, name)
+		}
+	}
+	notice := fmt.Sprintf("Put back %d picture%s.", placed, plural(placed))
+	if ignored > 0 {
+		notice += fmt.Sprintf(" %d file%s did not match a missing picture and %s left out.",
+			ignored, plural(ignored), map[bool]string{true: "was", false: "were"}[ignored == 1])
+	}
+	if len(want) > 0 {
+		notice += fmt.Sprintf(" %d still missing.", len(want))
+	}
+	http.Redirect(w, r, "/data?notice="+urlEscape(notice), http.StatusSeeOther)
+}
+
+func missingFor(c *Component) map[string]bool {
+	out := map[string]bool{}
+	for _, p := range c.Pics {
+		if _, err := os.Stat(filepath.Join(store.PicsDir(), filepath.Base(p))); err != nil {
+			out[p] = true
+		}
+	}
+	return out
+}
+
+func plural(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
 }

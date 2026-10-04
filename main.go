@@ -23,7 +23,7 @@ var assets embed.FS
 //go:embed tmpl
 var tmplFS embed.FS
 
-const version = "1.7"
+const version = "1.8"
 
 var store *Store
 
@@ -165,6 +165,7 @@ func main() {
 	mux.HandleFunc("POST /backup/restore", handleBackupRestore)
 	mux.HandleFunc("GET /backup/{name}", handleBackupDownload)
 	mux.HandleFunc("GET /export", handleExport)
+	mux.HandleFunc("POST /pics/reattach", handlePicsReattach)
 	mux.HandleFunc("POST /import", handleImportAny)
 	mux.HandleFunc("GET /guide", handleGuide)
 

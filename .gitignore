@@ -1,9 +1,10 @@
-# built binaries
-sporeline
-sporeline.exe
+# built binaries (they belong in a GitHub Release, not the repository)
+/sporeline
+/sporeline.exe
 
-# your own log, if you ever run it from the source folder
-sporeline.json
-pics/
-removed-pics/
-backups/
+# your own log, if you ever run it from the source folder.
+# Anchored with a leading slash so testdata/mycolog/pics is still committed.
+/sporeline.json
+/pics/
+/removed-pics/
+/backups/

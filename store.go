@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -67,20 +68,20 @@ func KindOf(key string) Kind {
 }
 
 type Component struct {
-	ID         string   `json:"id"` // SE1K7P — prefix, generation, three random
-	Kind       string   `json:"kind"`
-	Sub        string   `json:"sub,omitempty"`
-	Strain     string   `json:"strain,omitempty"` // what you call it; leads the display
-	Species    string   `json:"species"`          // the formal name behind it
-	Gen        int      `json:"gen"`
-	Created    string   `json:"created"` // YYYY-MM-DD
-	Notes      string   `json:"notes,omitempty"`
-	Remarks    string   `json:"remarks,omitempty"` // what this genetic is like
-	FlushLog   []Flush  `json:"flushLog,omitempty"` // grows: one entry per flush
+	ID       string  `json:"id"` // SE1K7P — prefix, generation, three random
+	Kind     string  `json:"kind"`
+	Sub      string  `json:"sub,omitempty"`
+	Strain   string  `json:"strain,omitempty"` // what you call it; leads the display
+	Species  string  `json:"species"`          // the formal name behind it
+	Gen      int     `json:"gen"`
+	Created  string  `json:"created"` // YYYY-MM-DD
+	Notes    string  `json:"notes,omitempty"`
+	Remarks  string  `json:"remarks,omitempty"`  // what this genetic is like
+	FlushLog []Flush `json:"flushLog,omitempty"` // grows: one entry per flush
 	// Older versions kept one total and a free-text line. They are read
 	// so old logs and backups still open, then turned into FlushLog.
-	Yield   float64 `json:"yield,omitempty"`
-	Flushes string  `json:"flushes,omitempty"`
+	Yield      float64  `json:"yield,omitempty"`
+	Flushes    string   `json:"flushes,omitempty"`
 	Gone       bool     `json:"gone"`
 	GoneAt     string   `json:"goneAt,omitempty"`
 	GoneReason string   `json:"goneReason,omitempty"` // used / contaminated / discarded / lost / unknown
@@ -99,15 +100,10 @@ type Ingredient struct {
 type Recipe struct {
 	Title       string       `json:"title"`
 	ID          string       `json:"id"`
-	Category    string       `json:"category"`
 	Yield       string       `json:"yield,omitempty"`
 	Ingredients []Ingredient `json:"ingredients,omitempty"`
-	Sterilize   string       `json:"sterilize,omitempty"`
-	Steps       string       `json:"steps,omitempty"`
 	Notes       string       `json:"notes,omitempty"`
 }
-
-var Categories = []string{"Agar", "Liquid culture", "Grain", "Substrate", "Other"}
 
 // Why something is no longer around. Kept as its own field rather than
 // buried in notes, so a season of entries can answer questions like
@@ -116,23 +112,45 @@ type GoneReason struct {
 	Key   string
 	Label string
 	Color string
+	Hint  string // one line under the choice in the "mark as gone" box
 }
 
 var GoneReasons = []GoneReason{
-	{"used", "Used up", "#63715F"},
-	{"contaminated", "Contaminated", "#9A3A2C"},
-	{"discarded", "Thrown out", "#8A7A53"},
-	{"lost", "Died or lost", "#6B7566"},
-	{"unknown", "Not recorded", "#9AA394"},
+	{"used", "Used up", "#63715F", "All of it went into what came next"},
+	{"contaminated", "Contaminated", "#9A3A2C", "Mold, bacteria or anything else that got in"},
+	{"discarded", "Thrown out", "#8A7A53", "Healthy, but not needed or not wanted"},
+	{"lost", "Died or lost", "#6B7566", "Stalled, dried out, or went missing"},
+	{"unknown", "Not sure", "#9AA394", "Leave the reason blank"},
 }
 
+func GoneReasonColor(key string) string {
+	for _, r := range GoneReasons {
+		if r.Key == key {
+			return r.Color
+		}
+	}
+	return "#9AA394"
+}
+
+// IDShowsGen is true when the ID's own digit states the generation,
+// which holds for IDs Sporeline issued but not for mycolog's.
+func (c *Component) IDShowsGen() bool {
+	g, ok := genFromID(c.ID)
+	return ok && g == c.Gen
+}
+
+// GoneReasonLabel names a reason, or returns "" when nobody recorded
+// one, so the page can say plain "Gone" once instead of "Gone · Gone".
 func GoneReasonLabel(key string) string {
+	if key == "" || key == "unknown" {
+		return ""
+	}
 	for _, r := range GoneReasons {
 		if r.Key == key {
 			return r.Label
 		}
 	}
-	return "Gone"
+	return ""
 }
 
 type Settings struct {
@@ -184,15 +202,81 @@ func OpenStore(dir string) (*Store, error) {
 	if s.data.Settings.BackupKeep == 0 {
 		s.data.Settings = defaultSettings()
 	}
-	s.upgrade()
+	if s.upgrade() {
+		// Save the repairs straight away rather than waiting for the
+		// next edit, so the file on disk agrees with what you see.
+		if err := s.flush(); err != nil {
+			return nil, err
+		}
+	}
 	return s, nil
 }
 
-// upgrade brings entries written by older versions up to date.
-func (s *Store) upgrade() {
+// upgrade brings entries written by older versions up to date. It
+// reports whether any generation had to be repaired.
+func (s *Store) upgrade() bool {
 	for _, c := range s.data.Components {
 		c.upgradeHarvest()
+		if c.Gone && c.GoneReason == "" {
+			c.GoneReason = "unknown"
+		}
+		if !c.Gone {
+			c.GoneAt, c.GoneReason, c.GoneNote = "", "", ""
+		}
 	}
+	return s.repairGenerations()
+}
+
+// sporelineID matches IDs Sporeline itself issued. Its fourth character
+// is the generation, and the server never saves one whose digit is
+// wrong, so it is a reliable record of the generation at birth.
+// mycolog's tokens are 4 or 5 characters and never match.
+var sporelineID = regexp.MustCompile(`^(SE|MY|SN|GR)([0-9A-Z])[A-HJ-NP-Z1-9]{3}$`)
+
+func genFromID(id string) (int, bool) {
+	m := sporelineID.FindStringSubmatch(id)
+	if m == nil {
+		return 0, false
+	}
+	ch := m[2][0]
+	if ch >= '0' && ch <= '9' {
+		return int(ch - '0'), true
+	}
+	return int(ch-'A') + 10, true
+}
+
+// repairGenerations puts back generations that have gone wrong. A child
+// is always at least one generation below its deepest parent, and a
+// Sporeline ID never claims a deeper generation than the entry has.
+// Generations are only ever raised, never lowered: deleting a culture's
+// ancestors from the log does not change how far down the line it is.
+func (s *Store) repairGenerations() bool {
+	changed := false
+	byID := map[string]*Component{}
+	for _, c := range s.data.Components {
+		byID[c.ID] = c
+		if g, ok := genFromID(c.ID); ok && g > c.Gen && KindOf(c.Kind).Prefix == c.ID[:2] {
+			c.Gen = g
+			changed = true
+		}
+	}
+	// Push each child below its parents. Repeating len+1 times settles
+	// any chain; a loop in the links cannot make it spin forever.
+	for pass := 0; pass <= len(s.data.Components); pass++ {
+		moved := false
+		for _, c := range s.data.Components {
+			for _, p := range c.Parents {
+				if pc := byID[p]; pc != nil && pc != c && c.Gen <= pc.Gen {
+					c.Gen = pc.Gen + 1
+					moved, changed = true, true
+				}
+			}
+		}
+		if !moved {
+			break
+		}
+	}
+	return changed
 }
 
 func (s *Store) PicsDir() string    { return filepath.Join(s.dir, "pics") }
