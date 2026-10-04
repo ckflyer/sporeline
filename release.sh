@@ -23,6 +23,14 @@ fi
 if [ -n "$(git status --porcelain)" ]; then
   echo "You have changes that are not committed. Run ./push.sh first."; exit 1
 fi
+# Run the checks here first when Go is installed, so a broken commit is
+# caught before it is tagged rather than a minute later on GitHub.
+if command -v go >/dev/null 2>&1; then
+  echo "Running the tests..."
+  if ! go vet ./... || ! go test ./...; then
+    echo "The tests failed, so nothing was released."; exit 1
+  fi
+fi
 git fetch --tags --quiet origin
 if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
   echo "$tag has already been released. Raise the version in main.go for a new one."; exit 1

@@ -136,6 +136,12 @@ sporeline.exe -data D:\myco   keep the data somewhere else
 Sporeline is written in Go with nothing but the standard library. No database
 driver, no C compiler, no build step for the front end.
 
+The project folder is called `sporeline`. `git clone` names it that on its
+own, but GitHub's **Download ZIP** unpacks to `sporeline-main`; rename it to
+`sporeline` so the paths in this README and in any notes match. The name of
+the folder does not affect the build: the program is always called
+`sporeline` (or `sporeline.exe`), because that comes from `go.mod`.
+
 ```
 go build .
 GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o sporeline.exe .
