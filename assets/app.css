@@ -404,3 +404,40 @@ td a.plain:hover{color:var(--primary)}
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;
   color:var(--muted);font-size:13px;background:var(--card);text-align:center}
 .shot .missing small{font-family:var(--mono);font-size:10px;word-break:break-all}
+
+/* ---------- data page: folders and backups ---------- */
+.pathrow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pathrow .path{font-family:var(--mono);font-size:13px;word-break:break-all;margin:0;flex:1;min-width:220px}
+.pathrow .btnrow{margin:0}
+.subsec{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.subsec .mini{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.autorow{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap}
+.autorow .keep{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.autorow .keep input{width:76px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* restore window: same frame as the parent picker */
+.pickhead{margin:0;flex:1;align-self:center;font-family:var(--serif);font-size:18px;font-weight:600}
+.pickempty{padding:18px 16px;margin:0;color:var(--muted)}
+.bkrow{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.bkpick{flex:1;display:flex;flex-direction:column;gap:3px;padding:11px 16px;background:none;border:0;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.bkpick:hover:not([disabled]){background:var(--card-2)}
+.bkpick[disabled]{opacity:.5;cursor:not-allowed}
+.bktop{display:flex;align-items:center;gap:8px}
+.bktop b{font-weight:500;font-size:14.5px}
+.bkpick em{font-style:normal;color:var(--muted);font-size:12.5px}
+.bknew{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);
+  border:1px solid rgba(31,77,58,.35);border-radius:999px;padding:1px 7px}
+.bkdl{align-self:center;padding:0 16px;font-size:13px;color:var(--muted)}
+.bkdl:hover{color:var(--primary)}
+.rconfirm{padding:18px 18px 16px}
+.rconfirm .rq{margin:0 0 8px;font-size:15px}
+
+/* change-folder dialog */
+.pathpick{display:flex;gap:8px}
+.pathpick input{flex:1;font-family:var(--mono);font-size:13px}
+.fstatus{min-height:20px;margin:8px 0 0;font-size:13px;color:var(--muted)}
+.fstatus.good{color:var(--primary)}
+.fstatus.warn{color:#8A6A1F}
+.fstatus.bad{color:var(--danger)}
+.dlgacts .linkish{border-color:transparent;background:none;padding-left:0;text-decoration:underline;text-underline-offset:3px}

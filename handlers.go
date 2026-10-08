@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -711,7 +712,6 @@ func handleRecipeDelete(w http.ResponseWriter, r *http.Request) {
 
 type dataPage struct {
 	S          Settings
-	Backups    []backupFile
 	BackupsDir string
 	Dir        string
 	Count      int
@@ -721,6 +721,10 @@ type dataPage struct {
 	GuessPath  string
 	GuessFound bool
 	Missing    int
+	BackupsN   int
+	StdData    string // the standard log folder, for "put it back"
+	StdBackups bool   // backups are in the standard place
+	FromFlag   bool   // started with -data, so a move lasts one session
 }
 
 func handleDataPage(w http.ResponseWriter, r *http.Request) {
@@ -733,8 +737,13 @@ func handleDataPage(w http.ResponseWriter, r *http.Request) {
 		guess = filepath.Join(home, "mycolog")
 	}
 	_, statErr := os.Stat(filepath.Join(guess, "mycolog.sqlite3"))
+	stdData, _ := dataDir()
+	if samePath(stdData, store.Dir()) {
+		stdData = ""
+	}
 	render(w, "data.html", page{Title: "Your data", Tab: "data", Data: dataPage{
-		S: store.Settings(), Backups: store.Backups(), BackupsDir: store.BackupsDir(),
+		S: store.Settings(), BackupsN: len(store.Backups()), BackupsDir: store.BackupsDir(),
+		StdData: stdData, StdBackups: store.Settings().BackupDir == "", FromFlag: dataFromFlag,
 		Dir: store.Dir(), Count: len(store.All()), Recipes: len(store.Recipes()), Pics: pics,
 		Notice: r.URL.Query().Get("notice"), GuessPath: guess, GuessFound: statErr == nil,
 		Missing: len(missingPics()),
@@ -1001,4 +1010,134 @@ func plural(n int) string {
 		return ""
 	}
 	return "s"
+}
+
+// ---------- restore window ----------
+
+type backupRow struct {
+	Name     string `json:"name"`
+	When     string `json:"when"`
+	Day      string `json:"day"`
+	Why      string `json:"why"`
+	Cultures int    `json:"cultures"`
+	Size     string `json:"size"`
+}
+
+var sameSecond = regexp.MustCompile(`-(manual|before-import|before-restore)-\d+\.json$`)
+
+// backupWhy says in words why a backup was taken, from the end of its name.
+func backupWhy(name string) string {
+	name = sameSecond.ReplaceAllString(name, "-$1.json")
+	switch {
+	case strings.HasSuffix(name, "-manual.json"):
+		return "Backed up by hand"
+	case strings.HasSuffix(name, "-before-import.json"):
+		return "Before an import"
+	case strings.HasSuffix(name, "-before-restore.json"):
+		return "Before a restore"
+	default:
+		return "Daily backup"
+	}
+}
+
+func humanSize(n int64) string {
+	switch {
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1f MB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%d KB", n>>10)
+	}
+	return fmt.Sprintf("%d bytes", n)
+}
+
+// handleBackupsList feeds the restore window. It is only asked for when
+// the window opens, so the Data page does not read every backup each time.
+func handleBackupsList(w http.ResponseWriter, r *http.Request) {
+	rows := []backupRow{}
+	for _, b := range store.Backups() {
+		row := backupRow{Name: b.Name, When: b.When.Format("2 Jan 2006, 15:04"),
+			Day: b.When.Format("Monday"), Why: backupWhy(b.Name), Size: humanSize(b.Size), Cultures: -1}
+		if raw, err := os.ReadFile(filepath.Join(store.BackupsDir(), b.Name)); err == nil {
+			var d struct {
+				Components []json.RawMessage `json:"components"`
+			}
+			if json.Unmarshal(raw, &d) == nil {
+				row.Cultures = len(d.Components)
+			}
+		}
+		rows = append(rows, row)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(rows)
+}
+
+// ---------- folders ----------
+
+func folderFor(which string) string {
+	if which == "backups" {
+		return store.BackupsDir()
+	}
+	return store.Dir()
+}
+
+func handleFolderOpen(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	if err := openFolder(folderFor(r.FormValue("which"))); err != nil {
+		http.Redirect(w, r, "/data?notice="+urlEscape("Could not open the folder: "+err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/data", http.StatusSeeOther)
+}
+
+func writeJSON(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(v)
+}
+
+func checkFolder(which, path string) folderInfo {
+	if which == "backups" {
+		return inspectBackupFolder(path)
+	}
+	return inspectDataFolder(path)
+}
+
+// handleFolderPick opens the computer's own folder chooser and reports
+// what was picked, checked the same way as a typed path.
+func handleFolderPick(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	which := r.FormValue("which")
+	p, err := pickFolder(folderFor(which))
+	if err != nil {
+		writeJSON(w, map[string]any{"noPicker": true})
+		return
+	}
+	if p == "" {
+		writeJSON(w, map[string]any{"cancelled": true})
+		return
+	}
+	writeJSON(w, checkFolder(which, p))
+}
+
+func handleFolderCheck(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	writeJSON(w, checkFolder(q.Get("which"), q.Get("path")))
+}
+
+func handleFolderMove(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	var msg string
+	var err error
+	if r.FormValue("which") == "backups" {
+		path := r.FormValue("path")
+		if r.FormValue("standard") == "1" {
+			path = ""
+		}
+		msg, err = store.SetBackupDir(path)
+	} else {
+		msg, err = MoveDataTo(r.FormValue("path"))
+	}
+	if err != nil {
+		msg = err.Error()
+	}
+	http.Redirect(w, r, "/data?notice="+urlEscape(msg), http.StatusSeeOther)
 }

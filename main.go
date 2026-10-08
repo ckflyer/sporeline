@@ -23,7 +23,7 @@ var assets embed.FS
 //go:embed tmpl
 var tmplFS embed.FS
 
-const version = "1.8"
+const version = "1.9"
 
 var store *Store
 
@@ -101,10 +101,16 @@ func main() {
 	flag.Parse()
 
 	d := *dir
+	dataFromFlag = d != ""
 	if d == "" {
 		var err error
-		if d, err = dataDir(); err != nil {
-			fatal("Could not work out where to keep your data: %v", err)
+		if d, err = rememberedDataDir(); err != nil {
+			fatal("%v", err)
+		}
+		if d == "" {
+			if d, err = dataDir(); err != nil {
+				fatal("Could not work out where to keep your data: %v", err)
+			}
 		}
 	}
 	var err error
@@ -118,7 +124,10 @@ func main() {
 	mux := http.NewServeMux()
 	assetFS, _ := fs.Sub(assets, "assets")
 	mux.Handle("GET /assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assetFS))))
-	mux.Handle("GET /pics/", http.StripPrefix("/pics/", http.FileServer(http.Dir(store.PicsDir()))))
+	// Looked up on every request, since the log folder can move.
+	mux.Handle("GET /pics/", http.StripPrefix("/pics/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.FileServer(http.Dir(store.PicsDir())).ServeHTTP(w, r)
+	})))
 
 	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		b, err := assets.ReadFile("assets/sporeline.ico")
@@ -164,6 +173,11 @@ func main() {
 	mux.HandleFunc("POST /backup/now", handleBackupNow)
 	mux.HandleFunc("POST /backup/restore", handleBackupRestore)
 	mux.HandleFunc("GET /backup/{name}", handleBackupDownload)
+	mux.HandleFunc("GET /backups.json", handleBackupsList)
+	mux.HandleFunc("POST /folder/open", handleFolderOpen)
+	mux.HandleFunc("POST /folder/pick", handleFolderPick)
+	mux.HandleFunc("GET /folder/check", handleFolderCheck)
+	mux.HandleFunc("POST /folder/move", handleFolderMove)
 	mux.HandleFunc("GET /export", handleExport)
 	mux.HandleFunc("POST /pics/reattach", handlePicsReattach)
 	mux.HandleFunc("POST /import", handleImportAny)

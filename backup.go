@@ -32,6 +32,15 @@ func (s *Store) BackupNow(tag string) (string, error) {
 		name = fmt.Sprintf("sporeline-%s-%s.json", stamp, tag)
 	}
 	path := filepath.Join(s.BackupsDir(), name)
+	// Two backups in the same second must not overwrite each other.
+	for n := 2; ; n++ {
+		if _, err := os.Stat(path); err != nil {
+			break
+		}
+		name = strings.TrimSuffix(filepath.Base(path), ".json")
+		name = strings.TrimSuffix(name, fmt.Sprintf("-%d", n-1)) + fmt.Sprintf("-%d.json", n)
+		path = filepath.Join(s.BackupsDir(), name)
+	}
 	if err := os.WriteFile(path, b, 0o600); err != nil {
 		return "", err
 	}
@@ -56,7 +65,12 @@ func (s *Store) Backups() []backupFile {
 		}
 		out = append(out, backupFile{Name: e.Name(), When: info.ModTime(), Size: info.Size()})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].When.After(out[j].When) })
+	sort.Slice(out, func(i, j int) bool {
+		if !out[i].When.Equal(out[j].When) {
+			return out[i].When.After(out[j].When)
+		}
+		return out[i].Name > out[j].Name // same second: later name first
+	})
 	return out
 }
 
@@ -99,8 +113,10 @@ func (s *Store) RestoreBackup(name string) error {
 	if err := json.Unmarshal(raw, &d); err != nil {
 		return fmt.Errorf("that backup file could not be read")
 	}
-	if d.Components == nil {
-		return fmt.Errorf("that backup holds no cultures")
+	// An empty log is a real backup too (the one taken before a first
+	// import, say); only a file that is not Sporeline's is refused.
+	if d.Version == 0 && d.Components == nil {
+		return fmt.Errorf("that is not a Sporeline backup")
 	}
 	// Pictures first: taking the before-restore backup can prune the very
 	// backup being restored, and with it the last mention of its pictures.

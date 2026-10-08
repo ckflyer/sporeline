@@ -5,8 +5,14 @@
 {{if $d.Notice}}<div class="notice">{{$d.Notice}}</div>{{end}}
 <div class="panel">
   <h3>Where it lives</h3>
-  <p style="font-family:var(--mono);font-size:13px;word-break:break-all;margin:0 0 8px">{{$d.Dir}}</p>
-  <p class="hint">Copy this folder and you have copied everything: your log, your pictures and the backups.</p>
+  <div class="pathrow">
+    <p class="path">{{$d.Dir}}</p>
+    <div class="btnrow">
+      <form method="post" action="/folder/open" style="margin:0"><input type="hidden" name="which" value="data"><button class="btn ghost sm">Open folder</button></form>
+      <button type="button" class="btn ghost sm" data-folder="data">Change…</button>
+    </div>
+  </div>
+  <p class="hint">Copy this folder and you have copied everything: your log, your pictures{{if $d.StdBackups}} and the backups{{end}}.</p>
   <dl class="kv" style="margin-top:14px">
     <dt>Cultures</dt><dd>{{$d.Count}}</dd>
     <dt>Recipes</dt><dd>{{$d.Recipes}}</dd>
@@ -14,15 +20,41 @@
   </dl>
 </div>
 
-<div class="panel">
-  <h3>Backup</h3>
+<div class="panel" id="backups">
+  <h3>Backups</h3>
   <div class="btnrow">
     <a class="btn" href="/export">Save backup file</a>
     <a class="btn ghost" href="/export?pics=0">Without pictures</a>
     <form method="post" action="/backup/now" style="margin:0"><button class="btn ghost">Back up now</button></form>
+    <button type="button" class="btn ghost" id="openrestore" {{if not $d.BackupsN}}disabled title="No backups yet"{{end}}>Restore…</button>
   </div>
-  <p class="hint">One file with every culture, recipe and picture, ready to import on another computer.
-    "Without pictures" is much smaller; every culture still remembers its picture names, so you can put the pictures back later below.{{if $d.S.LastBackup}} Last backup {{$d.S.LastBackup}}.{{end}}</p>
+  <p class="hint">"Save backup file" downloads one file with every culture, recipe and picture, ready to import on another computer.
+    "Without pictures" is much smaller; every culture still remembers its picture names, so the pictures can be put back later.
+    "Back up now" adds a copy to the backups folder below.{{if $d.S.LastBackup}} Last backup {{$d.S.LastBackup}}.{{end}}</p>
+
+  <div class="subsec">
+    <form method="post" action="/settings" class="autorow">
+      <label class="checkline" style="margin:0">
+        <input type="checkbox" name="backupsOn" value="1" {{if $d.S.BackupsOn}}checked{{end}}>
+        <span>Back up once a day, and before every import</span>
+      </label>
+      <label class="keep">Keep the last
+        <input type="number" name="keep" min="1" max="500" value="{{$d.S.BackupKeep}}"></label>
+      <button class="btn sm">Save</button>
+    </form>
+  </div>
+
+  <div class="subsec">
+    <span class="mini">Kept in</span>
+    <div class="pathrow">
+      <p class="path">{{$d.BackupsDir}}</p>
+      <div class="btnrow">
+        <form method="post" action="/folder/open" style="margin:0"><input type="hidden" name="which" value="backups"><button class="btn ghost sm">Open folder</button></form>
+        <button type="button" class="btn ghost sm" data-folder="backups">Change…</button>
+      </div>
+    </div>
+    <p class="hint">{{$d.BackupsN}} backup{{if ne $d.BackupsN 1}}s{{end}} here.{{if not $d.StdBackups}} Kept apart from your log, so a backup survives even if the log folder is lost.{{else}} Tip: a folder on another drive or a synced folder (OneDrive, Dropbox) keeps backups safe if this computer fails.{{end}}</p>
+  </div>
 </div>
 
 {{if $d.Missing}}
@@ -34,41 +66,6 @@
     <button class="btn">Put pictures back</button>
   </form>
   <p class="hint">Choose the files from your old pics folder. Each one goes back on the right culture by its file name; anything that does not match is left out.</p>
-</div>
-{{end}}
-
-<div class="panel">
-  <h3>Automatic backups</h3>
-  <form method="post" action="/settings">
-    <label class="checkline">
-      <input type="checkbox" name="backupsOn" value="1" {{if $d.S.BackupsOn}}checked{{end}}>
-      <span>Back up once a day, and before every import</span>
-    </label>
-    <div class="inlineform">
-      <label class="f"><span>How many to keep</span>
-        <input type="number" name="keep" min="1" max="500" value="{{$d.S.BackupKeep}}"></label>
-      <button class="btn">Save</button>
-    </div>
-  </form>
-  <p class="hint">Kept in <code>{{$d.BackupsDir}}</code></p>
-</div>
-
-{{if $d.Backups}}
-<div class="panel">
-  <h3>Restore</h3>
-  <p class="hint" style="margin:0 0 10px">Replaces everything in your log. The current version is backed up first.</p>
-  <table style="border:0"><tbody>
-  {{range $d.Backups}}
-    <tr>
-      <td style="padding:7px 0"><a href="/backup/{{.Name}}">{{.When.Format "2 Jan 2006, 15:04"}}</a>
-        <div class="hint">{{.Name}}</div></td>
-      <td style="padding:7px 0;text-align:right">
-        <form method="post" action="/backup/restore" onsubmit="return confirm('Replace everything in your log with this backup?')" style="margin:0">
-          <input type="hidden" name="name" value="{{.Name}}">
-          <button class="btn ghost sm">Restore</button></form></td>
-    </tr>
-  {{end}}
-  </tbody></table>
 </div>
 {{end}}
 
@@ -103,7 +100,155 @@
 </div>
 
 
+<div class="pickscrim" id="rscrim" hidden></div>
+<div class="picker" id="restore" hidden role="dialog" aria-labelledby="restore-title">
+  <header>
+    <h3 id="restore-title" class="pickhead">Restore a backup</h3>
+    <button type="button" class="btn ghost sm" id="rclose">Close</button>
+  </header>
+  <div id="rlist" class="picklist"><p class="pickempty">Loading…</p></div>
+  <div id="rconfirm" class="rconfirm" hidden>
+    <p class="rq">Replace everything in your log with the backup from <b id="rwhen"></b>?</p>
+    <p class="hint" id="rcount"></p>
+    <p class="hint">Your log as it is now is backed up first, so you can undo this by restoring that backup.</p>
+    <form method="post" action="/backup/restore" class="dlgacts">
+      <input type="hidden" name="name" id="rname">
+      <button type="button" class="btn ghost" id="rback">Back</button>
+      <button class="btn danger">Restore this backup</button>
+    </form>
+  </div>
+</div>
+
+<dialog id="folderdlg" class="dlg" aria-labelledby="folder-title">
+  <form method="post" action="/folder/move" id="folderform">
+    <input type="hidden" name="which" id="fwhich">
+    <h3 id="folder-title"></h3>
+    <p class="hint" id="fintro" style="margin:0 0 14px"></p>
+    <label class="f"><span>New folder</span>
+      <div class="pathpick">
+        <input type="text" name="path" id="fpath" autocomplete="off" spellcheck="false">
+        <button type="button" class="btn ghost" id="fbrowse">Browse…</button>
+      </div></label>
+    <p class="fstatus" id="fstatus" aria-live="polite"></p>
+    <div class="dlgacts">
+      <button type="button" class="btn ghost linkish" id="fstandard" hidden>Use the standard folder</button>
+      <span style="flex:1"></span>
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button class="btn" id="fgo" disabled>Move</button>
+    </div>
+  </form>
+</dialog>
+
 <script>
+var DATA = {
+  dir: {{$d.Dir}}, backups: {{$d.BackupsDir}}, count: {{$d.Count}},
+  stdData: {{$d.StdData}}, stdBackups: {{$d.StdBackups}}, fromFlag: {{$d.FromFlag}}
+};
+
+// ----- restore window, built like the parent picker -----
+(function(){
+  var box = document.getElementById("restore"), scrim = document.getElementById("rscrim"),
+      list = document.getElementById("rlist"), conf = document.getElementById("rconfirm"),
+      openBtn = document.getElementById("openrestore");
+  function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function show(){ box.hidden = false; scrim.hidden = false; list.hidden = false; conf.hidden = true; load(); }
+  function hide(){ box.hidden = true; scrim.hidden = true; openBtn.focus(); }
+  function load(){
+    list.textContent = ""; list.appendChild(el("p", "pickempty", "Loading…"));
+    fetch("/backups.json").then(function(r){ return r.json(); }).then(function(rows){
+      list.textContent = "";
+      if (!rows.length) { list.appendChild(el("p", "pickempty", "No backups yet.")); return; }
+      rows.forEach(function(b, i){
+        var row = el("div", "bkrow");
+        var pick = el("button", "bkpick"); pick.type = "button";
+        var top = el("span", "bktop");
+        top.appendChild(el("b", null, b.when));
+        if (i === 0) top.appendChild(el("span", "bknew", "Newest"));
+        pick.appendChild(top);
+        var sub = b.why + " · " + (b.cultures >= 0 ? b.cultures + " culture" + (b.cultures === 1 ? "" : "s") : "could not be read") + " · " + b.size;
+        pick.appendChild(el("em", null, sub));
+        if (b.cultures < 0) pick.disabled = true;
+        pick.addEventListener("click", function(){ ask(b); });
+        var dl = el("a", "bkdl", "Download"); dl.href = "/backup/" + encodeURIComponent(b.name);
+        dl.title = "Save a copy of this backup file";
+        row.appendChild(pick); row.appendChild(dl); list.appendChild(row);
+      });
+    }).catch(function(){ list.textContent = ""; list.appendChild(el("p", "pickempty", "Could not load the backups. Reload the page and try again.")); });
+  }
+  function ask(b){
+    document.getElementById("rwhen").textContent = b.when;
+    document.getElementById("rname").value = b.name;
+    var diff = b.cultures - DATA.count, note = "That backup has " + b.cultures + " culture" + (b.cultures === 1 ? "" : "s") + "; your log has " + DATA.count + " now";
+    if (diff < 0) note += ", so " + (-diff) + " would disappear from the log.";
+    else note += ".";
+    document.getElementById("rcount").textContent = note;
+    list.hidden = true; conf.hidden = false;
+  }
+  openBtn.addEventListener("click", show);
+  document.getElementById("rclose").addEventListener("click", hide);
+  document.getElementById("rback").addEventListener("click", function(){ conf.hidden = true; list.hidden = false; });
+  scrim.addEventListener("click", hide);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && !box.hidden) hide(); });
+})();
+
+// ----- changing a folder -----
+(function(){
+  var dlg = document.getElementById("folderdlg"), which = document.getElementById("fwhich"),
+      path = document.getElementById("fpath"), status = document.getElementById("fstatus"),
+      go = document.getElementById("fgo"), browse = document.getElementById("fbrowse"),
+      std = document.getElementById("fstandard"), timer;
+  function say(text, kind){ status.textContent = text || ""; status.className = "fstatus" + (kind ? " " + kind : ""); }
+  function verdict(info){
+    path.value = info.path || path.value;
+    if (!info.ok) { go.disabled = true; say(info.problem, info.same ? "" : "bad"); return; }
+    go.disabled = false;
+    if (which.value === "backups") { go.textContent = "Keep backups here"; say("Your " + "existing backups move across with them.", "good"); }
+    else if (info.hasLog) { go.textContent = "Switch to this log"; say("This folder already has a Sporeline log with " + info.cultures + " culture" + (info.cultures === 1 ? "" : "s") + ". Sporeline will use that log instead of yours; yours stays where it is.", "warn"); }
+    else { go.textContent = "Move my log here"; say("Your log, pictures" + (DATA.stdBackups ? " and backups" : "") + " are copied here and Sporeline uses this folder from now on. The old folder is left as it was.", "good"); }
+  }
+  function check(){
+    clearTimeout(timer);
+    if (!path.value.trim()) { go.disabled = true; say(""); return; }
+    timer = setTimeout(function(){
+      fetch("/folder/check?which=" + which.value + "&path=" + encodeURIComponent(path.value))
+        .then(function(r){ return r.json(); }).then(verdict);
+    }, 250);
+  }
+  document.querySelectorAll("[data-folder]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var w = b.dataset.folder; which.value = w; path.value = ""; go.disabled = true; say("");
+      go.textContent = w === "backups" ? "Keep backups here" : "Move my log here";
+      document.getElementById("folder-title").textContent = w === "backups" ? "Where backups are kept" : "Where your log lives";
+      document.getElementById("fintro").textContent = w === "backups"
+        ? "Now: " + DATA.backups
+        : "Now: " + DATA.dir + (DATA.fromFlag ? ". Sporeline was started with -data, so a change only lasts until it closes." : "");
+      std.hidden = w === "backups" ? DATA.stdBackups : !DATA.stdData;
+      dlg.showModal(); path.focus();
+    });
+  });
+  path.addEventListener("input", check);
+  browse.addEventListener("click", function(){
+    browse.disabled = true; say("A folder window is open. It may be behind this one.");
+    var body = new FormData(); body.append("which", which.value);
+    fetch("/folder/pick", {method: "POST", body: body}).then(function(r){ return r.json(); }).then(function(info){
+      browse.disabled = false;
+      if (info.noPicker) { say("This computer has no folder window Sporeline can open. Type or paste the path instead."); browse.hidden = true; return; }
+      if (info.cancelled) { say(""); return; }
+      verdict(info);
+    }).catch(function(){ browse.disabled = false; say(""); });
+  });
+  std.addEventListener("click", function(){
+    if (which.value === "backups") {
+      var f = document.getElementById("folderform");
+      var h = document.createElement("input"); h.type = "hidden"; h.name = "standard"; h.value = "1"; f.appendChild(h);
+      f.submit();
+    } else { path.value = DATA.stdData; check(); }
+  });
+  dlg.querySelectorAll("[data-close]").forEach(function(b){ b.addEventListener("click", function(){ dlg.close(); }); });
+  dlg.addEventListener("click", function(e){ if (e.target === dlg) dlg.close(); });
+  document.getElementById("folderform").addEventListener("submit", function(){ go.disabled = true; go.textContent = "Working…"; });
+})();
+
 var src = document.getElementById("source");
 function swap(){
   document.getElementById("src-sporeline").hidden = src.value !== "sporeline";

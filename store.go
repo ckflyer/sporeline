@@ -157,6 +157,7 @@ type Settings struct {
 	BackupsOn  bool   `json:"backupsOn"`
 	BackupKeep int    `json:"backupKeep"`
 	LastBackup string `json:"lastBackup,omitempty"`
+	BackupDir  string `json:"backupDir,omitempty"` // empty: "backups" in the log folder
 }
 
 func defaultSettings() Settings {
@@ -183,9 +184,6 @@ func OpenStore(dir string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Join(dir, "pics"), 0o755); err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(filepath.Join(dir, "backups"), 0o755); err != nil {
-		return nil, err
-	}
 	s := &Store{dir: dir, file: filepath.Join(dir, "sporeline.json")}
 	s.data = Data{Version: 1, Settings: defaultSettings()}
 	b, err := os.ReadFile(s.file)
@@ -201,6 +199,15 @@ func OpenStore(dir string) (*Store, error) {
 	}
 	if s.data.Settings.BackupKeep == 0 {
 		s.data.Settings = defaultSettings()
+	}
+	// Made after reading settings, since backups may live elsewhere. A
+	// backup folder that has gone (an unplugged drive) falls back to the
+	// standard one rather than stopping Sporeline from starting.
+	if err := os.MkdirAll(s.BackupsDir(), 0o755); err != nil {
+		s.data.Settings.BackupDir = ""
+		if err := os.MkdirAll(s.BackupsDir(), 0o755); err != nil {
+			return nil, err
+		}
 	}
 	if s.upgrade() {
 		// Save the repairs straight away rather than waiting for the
@@ -279,9 +286,14 @@ func (s *Store) repairGenerations() bool {
 	return changed
 }
 
-func (s *Store) PicsDir() string    { return filepath.Join(s.dir, "pics") }
-func (s *Store) BackupsDir() string { return filepath.Join(s.dir, "backups") }
-func (s *Store) Dir() string        { return s.dir }
+func (s *Store) PicsDir() string { return filepath.Join(s.dir, "pics") }
+func (s *Store) BackupsDir() string {
+	if d := s.Settings().BackupDir; d != "" {
+		return d
+	}
+	return filepath.Join(s.dir, "backups")
+}
+func (s *Store) Dir() string { return s.dir }
 
 // flush writes atomically: temp file, then rename over the original.
 func (s *Store) flush() error {

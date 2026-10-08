@@ -61,12 +61,35 @@ Copy that folder and you have copied everything. Deleting or replacing
 On a Mac the folder is `~/Library/Application Support/sporeline`, and on Linux
 `~/.local/share/sporeline`.
 
+**Open folder** on the **Data & settings** page shows it in Explorer (or
+Finder). To keep it somewhere else, such as a synced Documents folder or a
+USB drive, click **Change…** there and pick a folder. Sporeline copies your
+log, pictures and backups across and uses the new place from then on. The
+old folder is left exactly as it was, with a `MOVED - READ ME.txt` note
+saying where the log went; delete it yourself once you have checked. If
+the folder you pick already holds a Sporeline log, Sporeline switches to
+that log instead and leaves yours alone. **Use the standard folder** in the
+same box moves it back.
+
+The new place is remembered in a small file outside the log
+(`%APPDATA%\sporeline-location.json` on Windows), so it survives upgrades.
+Starting Sporeline with `-data <folder>` always wins over it. If the chosen
+folder is missing when Sporeline starts (an unplugged drive), it stops and
+says so rather than opening an empty log.
+
 ## Backups
 
 Sporeline copies your log into the `backups` folder once a day when it starts,
-and always before an import or a restore. It keeps the last thirty. You can
-change that, restore an earlier copy, or save a single backup file from the
-**Data & settings** page.
+and always before an import or a restore. It keeps the last thirty. Everything
+about backups is in one box on the **Data & settings** page: save a backup
+file, back up now, change how many are kept, and **Restore…**, which lists
+every backup with why it was taken and how many cultures it holds. Your log
+is backed up again before any restore, so a restore can be undone too.
+
+Backups can live in their own folder, for example on another drive or in a
+synced folder, so they survive the computer failing. Click **Change…** next
+to "Kept in"; existing backups move across. If that folder is missing when
+Sporeline starts, backups go to the standard folder until it is back.
 
 The single backup file carries your pictures inside it, so one file moves
 everything to another computer. There is also a smaller version without

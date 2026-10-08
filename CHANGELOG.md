@@ -3,6 +3,30 @@
 Each `## version` section becomes the notes on that GitHub Release, so
 write it for the people downloading it.
 
+## 1.9
+
+**New**
+- **Open folder** buttons on the Data page show your log folder and your
+  backups folder in Explorer or Finder.
+- Your log can move to another folder: **Change…** opens the computer's own
+  folder window (or take a typed path), copies your log, pictures and backups
+  there, and uses it from then on. The old folder is left untouched with a
+  note saying where everything went. Choosing a folder that already holds a
+  Sporeline log switches to that log instead.
+- Backups can be kept in a folder of their own, such as another drive or a
+  synced folder. Existing backups move across.
+
+**Changed**
+- The three backup boxes on the Data page are now one **Backups** box.
+- **Restore…** opens a window like "Choose a parent", listing each backup with
+  why it was taken, how many cultures it holds and its size, and asks once
+  more before replacing anything.
+
+**Fixed**
+- A backup of an empty log (the one taken before a first import) could not
+  be restored.
+- Two backups taken in the same second overwrote each other.
+
 ## 1.8
 
 **Fixed**

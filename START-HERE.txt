@@ -12,6 +12,7 @@ Quick start
 
 3. Your data goes to C:\Users\<you>\sporeline\
    Back up that folder and you have backed up everything.
+   To keep it somewhere else, use Data -> Where it lives -> Change.
 
 Coming from mycolog
 -------------------
