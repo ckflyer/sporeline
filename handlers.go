@@ -310,6 +310,8 @@ type compData struct {
 	NextKind   Kind
 	Msg, MsgAt string // a short "saved" message and which section it belongs to
 	Missing    map[string]bool
+	FullSize   int
+	MoreInFull bool
 }
 
 func handleComponentEdit(w http.ResponseWriter, r *http.Request) {
@@ -338,6 +340,10 @@ func handleComponent(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fam = store.CloseLineage(c.ID)
 	}
+	fullSize := len(fam)
+	if !full {
+		fullSize = len(store.FullLineage(c.ID))
+	}
 	var others []*Component
 	for _, o := range store.All() {
 		if o.ID != c.ID {
@@ -349,6 +355,7 @@ func handleComponent(w http.ResponseWriter, r *http.Request) {
 		C:    c, Kind: KindOf(c.Kind),
 		Parents: store.Parents(c.ID), Children: store.Children(c.ID),
 		Family: store.FamilySVG(fam, c.ID), FullGraph: full, FamilySize: len(fam),
+		FullSize: fullSize, MoreInFull: fullSize > len(fam),
 		Subs: store.SubsFor(c.Kind), AllSpecies: store.Seen("species"), AllStrains: store.Seen("strain"),
 		Others: others, NextKind: KindOf(KindOf(c.Kind).Next),
 		Msg: r.URL.Query().Get("msg"), MsgAt: r.URL.Query().Get("at"),

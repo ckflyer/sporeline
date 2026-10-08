@@ -284,3 +284,76 @@ func TestRestoreEmptyBackup(t *testing.T) {
 		t.Fatal("a file that is not Sporeline's must be refused")
 	}
 }
+
+// The default view is the line back to the start plus everything from the
+// grandparents down; the great-grandparent's other branches wait for
+// "whole tree".
+func TestCloseLineageReachesGrandparents(t *testing.T) {
+	freshStore(t)
+	add := func(kind string, parents ...string) string {
+		c := &Component{Kind: kind, Species: "Lion's Mane", Parents: parents}
+		store.Add(c)
+		return c.ID
+	}
+	root := add("spores")
+	other := add("myc", root) // great-grandparent's other branch
+	gp := add("myc", root)
+	p := add("spawn", gp)
+	aunt := add("myc", gp)
+	cousin := add("myc", aunt)
+	me := add("grow", p)
+	kid := add("grow", me)
+
+	in := map[string]bool{}
+	for _, c := range store.CloseLineage(me) {
+		in[c.ID] = true
+	}
+	for _, id := range []string{root, gp, p, aunt, cousin, me, kid} {
+		if !in[id] {
+			t.Errorf("%s should be in the default view", id)
+		}
+	}
+	if in[other] {
+		t.Error("the great-grandparent's other branches belong to the whole tree")
+	}
+	if len(store.FullLineage(me)) != 8 {
+		t.Fatal("whole tree should have everything")
+	}
+}
+
+// A huge family falls back to "parents down" so the view stays readable,
+// but still shows the line above.
+func TestCloseLineageStaysReadable(t *testing.T) {
+	freshStore(t)
+	root := &Component{Kind: "myc", Species: "X"}
+	store.Add(root)
+	gp := &Component{Kind: "myc", Species: "X", Parents: []string{root.ID}}
+	store.Add(gp)
+	for i := 0; i < closeLimit; i++ {
+		store.Add(&Component{Kind: "myc", Species: "X", Parents: []string{gp.ID}})
+	}
+	p := &Component{Kind: "myc", Species: "X", Parents: []string{gp.ID}}
+	store.Add(p)
+	me := &Component{Kind: "grow", Species: "X", Parents: []string{p.ID}}
+	store.Add(me)
+	fam := store.CloseLineage(me.ID)
+	if len(fam) != 4 { // root, gp, p, me
+		t.Fatalf("got %d cards, want 4", len(fam))
+	}
+}
+
+func TestTreeCardDrawing(t *testing.T) {
+	freshStore(t)
+	c := &Component{Kind: "grow", Species: "X"}
+	store.Add(c)
+	svg := store.FamilySVG([]*Component{c}, c.ID)
+	if !strings.Contains(svg, `fill="`+KindOf("grow").Color+`"`) {
+		t.Error("the kind colour should be drawn")
+	}
+	if !strings.Contains(svg, `stroke="#F2C94C" stroke-width="3.5"`) {
+		t.Error("this one should have the bold ring")
+	}
+	if !strings.Contains(svg, "max-width:") || !strings.Contains(svg, "min-width:") {
+		t.Error("the tree should carry its fit limits")
+	}
+}

@@ -15,7 +15,7 @@
 
 <div class="sheet">
   <section class="treesec">
-    <div class="treewrap">{{svg $d.Family}}</div>
+    <div class="treeframe"><div class="treewrap">{{svg $d.Family}}</div></div>
     <div class="treefoot">
       <p class="treekey">
         {{range kinds}}<span><i style="background:{{.Color}}"></i>{{.Name}}</span>{{end}}
@@ -23,9 +23,9 @@
         <span><i class="k-this"></i>This one</span>
         <span class="genkey">GEN = generation, the steps from where the line started.{{if $c.IDShowsGen}} It is also the digit in each ID: {{$c.ID}} is generation {{$c.Gen}}.{{else}} {{$c.ID}} is generation {{$c.Gen}}.{{end}}</span>
       </p>
-      <p class="treecount"><span class="tipleft">{{$d.FamilySize}} in view {{help "Close family is this one, its siblings and everything made from them. The whole tree adds every ancestor and their other branches."}}</span>
+      <p class="treecount"><span class="tipleft">{{$d.FamilySize}} in view {{help "Family shows the line back to where it started, plus everything from the grandparents down: siblings, cousins and children. The whole tree adds every other branch."}}</span>
       <span class="sep">·</span>
-      {{if $d.FullGraph}}<a href="/component/{{$c.ID}}">close family</a>{{else}}<a href="/component/{{$c.ID}}?full=1">whole tree</a>{{end}}
+      {{if $d.FullGraph}}<a href="/component/{{$c.ID}}">family only</a>{{else if $d.MoreInFull}}<a href="/component/{{$c.ID}}?full=1">whole tree ({{$d.FullSize}})</a>{{else}}<span class="hint" style="margin:0">this is the whole tree</span>{{end}}
       </p>
     </div>
   </section>
@@ -203,9 +203,20 @@
 // When the tree is wider than the screen, start with this culture in view.
 (function(){
   var wrap = document.querySelector(".treewrap"), me = wrap && wrap.querySelector("a.this");
-  if (!wrap || !me || wrap.scrollWidth <= wrap.clientWidth) return;
+  if (!wrap || wrap.scrollWidth <= wrap.clientWidth + 1) return;
+  // Only a very wide tree scrolls; fade the edges so a card cut off at
+  // the side reads as "more this way", not as a mistake.
+  wrap.classList.add("scrolls");
+  var frame = wrap.parentNode;
+  function edges(){
+    frame.classList.toggle("more-left", wrap.scrollLeft > 4);
+    frame.classList.toggle("more-right", wrap.scrollLeft + wrap.clientWidth < wrap.scrollWidth - 4);
+  }
+  wrap.addEventListener("scroll", edges);
+  if (!me) { edges(); return; }
   var w = wrap.getBoundingClientRect(), m = me.getBoundingClientRect();
   wrap.scrollLeft += (m.left + m.width / 2) - (w.left + w.width / 2);
+  edges();
 })();
 (function(){
   var forms = document.querySelectorAll(".editrow, .textedit");
