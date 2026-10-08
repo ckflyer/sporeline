@@ -3,6 +3,22 @@
 Each `## version` section becomes the notes on that GitHub Release, so
 write it for the people downloading it.
 
+## 1.10
+
+**Changed**
+- Family trees show more without a click: the whole line back to where it
+  started, plus everything from the grandparents down (siblings, cousins,
+  children). **Whole tree** shows how many more it would add, and is hidden
+  when there is nothing more to see.
+- Trees shrink to fit their box instead of running off the right edge. Only a
+  very wide family scrolls, starting on the current culture, with faded
+  edges to show there is more.
+- Each card's colour edge is wider and fills the whole side, round corners
+  included, and the outline around the current culture is bolder.
+
+**Fixed**
+- The rightmost card in a wide row ran off the edge of the tree.
+
 ## 1.9
 
 **New**
@@ -17,15 +33,6 @@ write it for the people downloading it.
   synced folder. Existing backups move across.
 
 **Changed**
-- Family trees show more without a click: the whole line back to where it
-  started, plus everything from the grandparents down (siblings, cousins,
-  children). **Whole tree** shows how many more it would add, and is hidden
-  when there is nothing more to see.
-- Trees shrink to fit their box instead of running off the right edge. Only a
-  very wide family scrolls, starting on the current culture, with faded
-  edges to show there is more.
-- Each card's colour edge is wider and fills the whole side, round corners
-  included, and the outline around the current culture is bolder.
 - The three backup boxes on the Data page are now one **Backups** box.
 - **Restore…** opens a window like "Choose a parent", listing each backup with
   why it was taken, how many cultures it holds and its size, and asks once

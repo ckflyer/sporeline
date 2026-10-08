@@ -23,7 +23,7 @@ var assets embed.FS
 //go:embed tmpl
 var tmplFS embed.FS
 
-const version = "1.9"
+const version = "1.10"
 
 var store *Store
 
